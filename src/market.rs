@@ -84,6 +84,52 @@ impl MarketDataProvider {
         Ok(markets)
     }
 
+    /// concurrently hydrate prices for all markets (Batch/Parallel)
+    pub async fn hydrate_market_prices(&self, markets: &mut Vec<Market>) {
+        use futures_util::stream::{self, StreamExt};
+
+        println!("⚡ Hydrating prices concurrently (Concurrency: 50)...");
+        let start = std::time::Instant::now();
+
+        // 1. Flatten all tasks: (market_idx, token_idx, token_id)
+        let mut tasks = Vec::new();
+        for (m_idx, market) in markets.iter().enumerate() {
+            for (t_idx, token_id) in market.clob_token_ids.iter().enumerate() {
+                tasks.push((m_idx, t_idx, token_id.clone()));
+            }
+        }
+
+        // 2. Create stream
+        let fetches = stream::iter(tasks).map(|(m_idx, t_idx, token_id)| {
+            let client = &self; // Ref to self
+            async move {
+                let res = client.fetch_order_book(&token_id).await;
+                (m_idx, t_idx, res)
+            }
+        }).buffer_unordered(50); // Concurrent limit
+
+        // 3. Collect results
+        let results: Vec<_> = fetches.collect().await;
+
+        // 4. Update markets
+        let mut update_count = 0;
+        for (m_idx, t_idx, res) in results {
+            if let Ok(book) = res {
+                let price = book.midpoint().unwrap_or(0.0);
+                if price > 0.0 {
+                    // println!("   CTX: Market {} | Token {} | Price: {:.3}", markets[m_idx].slug, t_idx, price);
+                    // Ensure vector is sized (it should be 2, but let's be safe)
+                    if t_idx < markets[m_idx].outcome_prices.len() {
+                        markets[m_idx].outcome_prices[t_idx] = price;
+                        update_count += 1;
+                    }
+                }
+            }
+        }
+
+        println!("   ✅ Updated {} prices in {:.2?}", update_count, start.elapsed());
+    }
+
     /// Fetch order book for a market from CLOB API
     pub async fn fetch_order_book(&self, token_id: &str) -> Result<OrderBook, Box<dyn Error>> {
         let url = format!("{}?token_id={}", self.clob_url, token_id);

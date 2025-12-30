@@ -69,29 +69,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("   Found {} active markets (Limit 20)", markets.len());
 
         // Hydrate prices (Real E2E)
-        /* 
-           In a production bot, we'd use WebSocket streams.
-           For this demo loop, we fetch books sequentially to be "completely real".
-        */
-        for market in markets.iter_mut() {
-            let mut prices = Vec::new();
-            for (i, token_id) in market.clob_token_ids.iter().enumerate() {
-                match market_provider.fetch_order_book(token_id).await {
-                    Ok(book) => {
-                        let price = book.midpoint().unwrap_or(0.0);
-                        if price > 0.0 {
-                            println!("   CTX: Market {} | Token {} | Price: {:.3}", market.slug, i, price);
-                        }
-                        prices.push(price);
-                    },
-                    Err(_) => prices.push(0.0), // Failed to fetch
-                }
-            }
-            // Update market state if we got prices for all outcomes (usually 2)
-            if prices.len() == market.outcomes.len() && prices.iter().all(|&p| p > 0.0) {
-                 market.outcome_prices = prices;
-            }
-        }
+        // Production: Use concurrent batching to fetch prices
+        market_provider.hydrate_market_prices(&mut markets).await;
 
         let signals = detector.scan(&markets);
         if signals.is_empty() {
