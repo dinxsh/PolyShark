@@ -8,7 +8,7 @@ token = "USDC"
 
 [trading]
 # Arbitrage detection thresholds
-min_spread_threshold = 0.02      # 2% minimum spread to trigger signal
+min_spread_threshold = 0.001      # 2% minimum spread to trigger signal
 min_profit_threshold = 0.10      # $0.10 minimum expected profit
 trade_size = 5.0                 # Fixed trade size per leg (USDC)
 max_position_value = 50.0        # Maximum total position value

@@ -206,6 +206,31 @@ impl PositionManager {
     pub fn trade_count(&self) -> usize {
         self.history.len()
     }
+    
+    /// Record a simulated trade (for demo mode only)
+    pub fn record_simulated_trade(&mut self, pnl: f64) {
+        // Create a dummy exit result for stats tracking
+        let dummy = ExitResult {
+            position: Position {
+                market_id: "demo".to_string(),
+                token_id: "demo".to_string(),
+                side: crate::types::Side::Buy,
+                size: 5.0,
+                entry_price: 0.5,
+                entry_time: 0,
+                entry_spread: 0.01,
+            },
+            exit_price: 0.5,
+            exit_time: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            reason: ExitReason::MeanReversion,
+            pnl,
+            fees: 0.0,
+        };
+        self.history.push(dummy);
+    }
 }
 
 #[cfg(test)]

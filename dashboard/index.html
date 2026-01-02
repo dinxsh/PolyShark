@@ -5,7 +5,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🦈 PolyShark Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            /* Slate Black Palette */
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-card: #151515;
+            --bg-elevated: #1a1a1a;
+            --bg-hover: #222222;
+
+            /* BTC Orange Palette */
+            --btc-orange: #f7931a;
+            --btc-orange-light: #ffa940;
+            --btc-orange-dark: #e07800;
+            --btc-gradient: linear-gradient(135deg, #f7931a 0%, #ffa940 100%);
+            --btc-gradient-subtle: linear-gradient(135deg, rgba(247, 147, 26, 0.15) 0%, rgba(255, 169, 64, 0.08) 100%);
+
+            /* Text Colors */
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1a1;
+            --text-muted: #6b6b6b;
+
+            /* Borders & Accents */
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-default: rgba(255, 255, 255, 0.08);
+            --border-orange: rgba(247, 147, 26, 0.3);
+
+            /* Status Colors */
+            --success: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.12);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.12);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.12);
+
+            /* Spacing */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,247 +56,671 @@
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0d1b2a 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
             min-height: 100vh;
-            color: #e0e0e0;
+            color: var(--text-primary);
+            line-height: 1.5;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 0 auto;
             padding: 2rem;
         }
 
+        /* Header */
         header {
             text-align: center;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2.5rem;
+            padding: 2rem;
+            background: var(--bg-card);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-default);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--btc-gradient);
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
         }
 
         header h1 {
-            font-size: 2.5rem;
-            background: linear-gradient(90deg, #00d4ff, #7c3aed, #f472b6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 2.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
             margin-bottom: 0.5rem;
         }
 
-        header p {
-            color: #94a3b8;
-            font-size: 1rem;
+        .title-shark {
+            color: var(--text-primary);
         }
 
+        .title-highlight {
+            background: var(--btc-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 0.938rem;
+            font-weight: 500;
+        }
+
+        /* Status Badge */
         .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
             padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-top: 1rem;
+            border-radius: 100px;
+            font-size: 0.813rem;
+            font-weight: 600;
+            margin-top: 1.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .status-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
 
         .status-badge.connected {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.3);
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .status-badge.connected .dot {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
         }
 
         .status-badge.disconnected {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
+        .status-badge.disconnected .dot {
+            background: var(--danger);
+            animation: none;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Grid Layout */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
         }
 
+        /* Cards */
         .card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
             padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-default);
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-orange);
+            box-shadow: 0 0 20px rgba(247, 147, 26, 0.05);
         }
 
         .card h3 {
-            color: #94a3b8;
-            font-size: 0.875rem;
-            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
             margin-bottom: 0.75rem;
         }
 
         .card .value {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 700;
-            color: #fff;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
         }
 
         .card .value.money::before {
             content: '$';
-            color: #22c55e;
+            color: var(--btc-orange);
         }
 
         .card .subtext {
-            color: #64748b;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.813rem;
+            margin-top: 0.375rem;
         }
 
-        .progress-container {
-            margin-top: 1rem;
-        }
-
-        .progress-bar {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
+        /* Permission Card */
+        .permission-card {
+            grid-column: span 8;
+            background: var(--bg-card);
+            border: 1px solid var(--border-orange);
+            position: relative;
             overflow: hidden;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #22c55e, #16a34a);
-            border-radius: 4px;
-            transition: width 0.3s ease;
+        .permission-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(247, 147, 26, 0.08) 0%, transparent 70%);
+            pointer-events: none;
         }
 
-        .progress-fill.warning {
-            background: linear-gradient(90deg, #f59e0b, #d97706);
-        }
-
-        .progress-fill.danger {
-            background: linear-gradient(90deg, #ef4444, #dc2626);
-        }
-
-        .trades-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .trade-item {
+        .permission-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
-            background: rgba(255, 255, 255, 0.03);
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
         }
 
-        .trade-item .trade-info {
+        .permission-header h3 {
+            margin-bottom: 0;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .trade-item .trade-market {
-            font-weight: 500;
-            color: #fff;
-        }
-
-        .trade-item .trade-time {
-            font-size: 0.75rem;
-            color: #64748b;
-        }
-
-        .trade-item .trade-amount {
-            font-weight: 600;
-        }
-
-        .trade-item .trade-amount.positive {
-            color: #22c55e;
-        }
-
-        .trade-item .trade-amount.negative {
-            color: #ef4444;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-            font-size: 0.875rem;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #7c3aed, #6366f1);
-            color: #fff;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
-        }
-
-        .btn-danger {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-danger:hover {
-            background: rgba(239, 68, 68, 0.3);
-        }
-
-        .permission-card {
-            grid-column: span 2;
+        .permission-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--btc-gradient-subtle);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
         }
 
         .permission-details {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
-            margin-top: 1rem;
         }
 
         .permission-item {
             text-align: center;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
+            padding: 1.25rem 1rem;
+            background: var(--bg-elevated);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
         }
 
         .permission-item label {
             display: block;
-            color: #64748b;
-            font-size: 0.75rem;
-            margin-bottom: 0.25rem;
+            color: var(--text-muted);
+            font-size: 0.688rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
         }
 
         .permission-item span {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #fff;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
         }
 
+        .permission-item span.remaining-value {
+            color: var(--btc-orange);
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-top: 1.25rem;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-elevated);
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--btc-gradient);
+            border-radius: 100px;
+            transition: width 0.4s ease;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, var(--warning), #fbbf24);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, var(--danger), #f87171);
+        }
+
+        /* Controls */
         .controls {
             display: flex;
-            gap: 1rem;
+            gap: 0.75rem;
             margin-top: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--btc-gradient);
+            color: #000;
+            box-shadow: 0 2px 8px rgba(247, 147, 26, 0.25);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(247, 147, 26, 0.35);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Stats Cards */
+        .stats-card {
+            grid-column: span 3;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--btc-gradient-subtle);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        /* Trades Card */
+        .trades-card {
+            grid-column: span 12;
+        }
+
+        .trades-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .trades-list {
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .trades-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .trades-list::-webkit-scrollbar-track {
+            background: var(--bg-elevated);
+            border-radius: 100px;
+        }
+
+        .trades-list::-webkit-scrollbar-thumb {
+            background: var(--text-muted);
+            border-radius: 100px;
+        }
+
+        .trade-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.875rem 1rem;
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.5rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            transition: all 0.2s ease;
+        }
+
+        .trade-item:hover {
+            border-color: var(--border-orange);
+        }
+
+        .trade-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .trade-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .trade-market {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.938rem;
+        }
+
+        .trade-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .trade-amount {
+            font-weight: 700;
+            font-size: 0.938rem;
+        }
+
+        .trade-amount.positive {
+            color: var(--success);
+        }
+
+        .trade-amount.negative {
+            color: var(--danger);
+        }
+
+        /* Toggle */
+        .toggle-container {
+            margin-top: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: var(--bg-elevated);
+            border-radius: 100px;
+            border: 1px solid var(--border-default);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 16px;
+            height: 16px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--btc-gradient);
+            border-color: transparent;
+        }
+
+        .toggle-switch.active::after {
+            left: 23px;
+            background: #000;
+        }
+
+        .toggle-label {
+            color: var(--text-secondary);
+            font-size: 0.813rem;
+            font-weight: 500;
+        }
+
+        .toggle-label .experimental {
+            color: var(--btc-orange);
+            font-size: 0.688rem;
+            font-weight: 600;
+            margin-left: 0.375rem;
+        }
+
+        /* Markets Section */
+        .markets-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .markets-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .meta-divider {
+            opacity: 0.5;
+        }
+
+        .markets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 0.75rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .markets-grid::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .markets-grid::-webkit-scrollbar-track {
+            background: var(--bg-elevated);
+            border-radius: 100px;
+        }
+
+        .markets-grid::-webkit-scrollbar-thumb {
+            background: var(--text-muted);
+            border-radius: 100px;
+        }
+
+        .market-item {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .market-item:hover {
+            border-color: var(--border-orange);
+            transform: translateY(-1px);
+        }
+
+        .market-question {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+            margin-bottom: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .market-prices {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .price-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.625rem;
+            background: var(--bg-hover);
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+        }
+
+        .price-label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .price-value {
+            color: var(--btc-orange);
+            font-weight: 700;
+        }
+
+        .price-value.yes {
+            color: var(--success);
+        }
+
+        .price-value.no {
+            color: var(--danger);
+        }
+
+        .market-spread {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .spread-label {
+            font-size: 0.688rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .spread-value {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--btc-orange);
+        }
+
+        .spread-value.balanced {
+            color: var(--text-muted);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .permission-card {
+                grid-column: span 12;
+            }
+
+            .stats-card {
+                grid-column: span 6;
+            }
         }
 
         @media (max-width: 768px) {
-            .permission-card {
-                grid-column: span 1;
+            .container {
+                padding: 1rem;
+            }
+
+            header {
+                padding: 1.5rem;
+            }
+
+            header h1 {
+                font-size: 1.75rem;
+            }
+
+            .stats-card {
+                grid-column: span 6;
             }
 
             .permission-details {
                 grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-card {
+                grid-column: span 12;
             }
         }
     </style>
@@ -262,18 +729,23 @@
 <body>
     <div class="container">
         <header>
-            <h1>🦈 PolyShark Dashboard</h1>
-            <p>Permissioned Autonomous Trading Agent</p>
-            <div id="connection-status" class="status-badge disconnected">
-                <span class="dot">●</span>
-                <span id="status-text">Disconnected</span>
+            <div class="header-content">
+                <h1><span class="title-shark">🦈 Poly</span><span class="title-highlight">Shark</span></h1>
+                <p>Permissioned Autonomous Trading Agent</p>
+                <div id="connection-status" class="status-badge disconnected">
+                    <span class="dot"></span>
+                    <span id="status-text">Disconnected</span>
+                </div>
             </div>
         </header>
 
         <div class="grid">
             <!-- Permission Card -->
             <div class="card permission-card">
-                <h3>ERC-7715 Permission Status</h3>
+                <div class="permission-header">
+                    <div class="permission-icon">🔐</div>
+                    <h3>ERC-7715 Permission Status</h3>
+                </div>
                 <div class="permission-details">
                     <div class="permission-item">
                         <label>Daily Limit</label>
@@ -285,7 +757,7 @@
                     </div>
                     <div class="permission-item">
                         <label>Remaining</label>
-                        <span id="remaining" style="color: #22c55e;">$10.00</span>
+                        <span id="remaining" class="remaining-value">$10.00</span>
                     </div>
                 </div>
                 <div class="progress-container">
@@ -294,219 +766,316 @@
                     </div>
                 </div>
                 <div class="controls">
-                    <button id="btn-connect" class="btn btn-primary">Connect MetaMask</button>
-                    <button id="btn-revoke" class="btn btn-danger" disabled>Revoke Permission</button>
+                    <button id="btn-connect" class="btn btn-primary">
+                        <span>⚡</span> Connect MetaMask
+                    </button>
+                    <button id="btn-revoke" class="btn btn-danger" disabled>
+                        <span>✕</span> Revoke Permission
+                    </button>
+                </div>
+                <div class="toggle-container">
+                    <div id="toggle-switch" class="toggle-switch"></div>
+                    <label class="toggle-label">
+                        Enable Real ERC-7715 Calls
+                        <span class="experimental">EXPERIMENTAL</span>
+                    </label>
                 </div>
             </div>
 
             <!-- Stats Cards -->
-            <div class="card">
+            <div class="card stats-card" style="grid-column: span 4;">
+                <div class="stat-icon">📊</div>
                 <h3>Total Trades</h3>
                 <div id="total-trades" class="value">0</div>
                 <div class="subtext">Since permission granted</div>
             </div>
 
-            <div class="card">
+            <div class="card stats-card" style="grid-column: span 4;">
+                <div class="stat-icon">🎯</div>
                 <h3>Win Rate</h3>
                 <div id="win-rate" class="value">0%</div>
                 <div class="subtext">Profitable trades</div>
             </div>
 
-            <div class="card">
+            <div class="card stats-card" style="grid-column: span 4;">
+                <div class="stat-icon">💰</div>
                 <h3>Total PnL</h3>
                 <div id="total-pnl" class="value money">0.00</div>
                 <div class="subtext">Net profit/loss</div>
             </div>
 
-            <div class="card">
+            <div class="card stats-card" style="grid-column: span 4;">
+                <div class="stat-icon">📈</div>
                 <h3>Open Positions</h3>
                 <div id="open-positions" class="value">0</div>
                 <div class="subtext">Active trades</div>
             </div>
-        </div>
 
-        <!-- Recent Trades -->
-        <div class="card">
-            <h3>Recent Trades</h3>
-            <div id="trades-list" class="trades-list">
-                <div class="trade-item">
-                    <div class="trade-info">
-                        <span class="trade-market">Waiting for trades...</span>
-                        <span class="trade-time">—</span>
+            <!-- Recent Trades -->
+            <div class="card trades-card" style="grid-column: span 8;">
+                <div class="trades-header">
+                    <h3>Recent Trades</h3>
+                </div>
+                <div id="trades-list" class="trades-list">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <div>Waiting for trades...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Markets -->
+            <div class="card" style="grid-column: span 12;">
+                <div class="markets-header">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div class="permission-icon">🌐</div>
+                        <h3 style="margin: 0;">Live Markets</h3>
+                    </div>
+                    <div class="markets-meta">
+                        <span id="markets-count">0 markets</span>
+                        <span class="meta-divider">•</span>
+                        <span id="markets-update">—</span>
+                    </div>
+                </div>
+                <div id="markets-grid" class="markets-grid">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📡</div>
+                        <div>Fetching markets...</div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <script>
-            const API_URL = 'http://localhost:3030/api';
-            let currentState = { permissionActive: false, useRealPermissions: false };
+    <script>
+        const API_URL = 'http://localhost:3030/api';
+        let currentState = { permissionActive: false, useRealPermissions: false };
 
-            // DOM Elements
-            const statusBadge = document.getElementById('connection-status');
-            const statusText = document.getElementById('status-text');
-            const dailyLimit = document.getElementById('daily-limit');
-            const spentToday = document.getElementById('spent-today');
-            const remaining = document.getElementById('remaining');
-            const progress = document.getElementById('allowance-progress');
-            const btnConnect = document.getElementById('btn-connect');
-            const btnRevoke = document.getElementById('btn-revoke');
+        // DOM Elements
+        const statusBadge = document.getElementById('connection-status');
+        const statusText = document.getElementById('status-text');
+        const dailyLimit = document.getElementById('daily-limit');
+        const spentToday = document.getElementById('spent-today');
+        const remaining = document.getElementById('remaining');
+        const progress = document.getElementById('allowance-progress');
+        const btnConnect = document.getElementById('btn-connect');
+        const btnRevoke = document.getElementById('btn-revoke');
+        const toggleSwitch = document.getElementById('toggle-switch');
 
-            // Add Toggle UI
-            const toggleContainer = document.createElement('div');
-            toggleContainer.style.marginTop = '1rem';
-            toggleContainer.style.display = 'flex';
-            toggleContainer.style.alignItems = 'center';
-            toggleContainer.style.gap = '0.5rem';
-            toggleContainer.innerHTML = `
-            <input type="checkbox" id="real-perm-toggle">
-            <label for="real-perm-toggle" style="color: #94a3b8; font-size: 0.875rem;">
-                Enable Real ERC-7715 Calls (Experimental)
-            </label>
-        `;
-            document.querySelector('.controls').parentElement.appendChild(toggleContainer);
+        // Toggle functionality
+        toggleSwitch.addEventListener('click', () => {
+            if (currentState.permissionActive) return;
+            currentState.useRealPermissions = !currentState.useRealPermissions;
+            toggleSwitch.classList.toggle('active', currentState.useRealPermissions);
+        });
 
-            const realPermToggle = document.getElementById('real-perm-toggle');
-            realPermToggle.addEventListener('change', (e) => {
-                currentState.useRealPermissions = e.target.checked;
-            });
+        // Poll API for updates
+        async function fetchStats() {
+            try {
+                const res = await fetch(`${API_URL}/stats`);
+                const stats = await res.json();
 
-            // Poll API for updates
-            async function fetchStats() {
-                try {
-                    const res = await fetch(`${API_URL}/stats`);
-                    const stats = await res.json();
+                if (stats.connected) {
+                    statusBadge.className = 'status-badge connected';
+                    statusText.textContent = stats.permission_active ? 'Agent Running' : 'Agent Idle';
 
-                    // Update UI from stats
-                    if (stats.connected) {
-                        statusBadge.className = 'status-badge connected';
-                        statusText.textContent = stats.permission_active ? 'Agent Running' : 'Agent Idle (Waiting for Permission)';
-
-                        if (stats.permission_active && !currentState.permissionActive) {
-                            btnConnect.textContent = 'Permission Active';
-                            btnConnect.disabled = true;
-                            btnRevoke.disabled = false;
-                            realPermToggle.disabled = true; // Lock toggle
-                            currentState.permissionActive = true;
-                        }
-
-                        // Update values
-                        dailyLimit.textContent = `$${stats.daily_limit.toFixed(2)}`;
-                        spentToday.textContent = `$${stats.spent_today.toFixed(2)}`;
-                        const rem = stats.daily_limit - stats.spent_today;
-                        remaining.textContent = `$${rem.toFixed(2)}`;
-
-                        // Progress bar
-                        const percent = (rem / stats.daily_limit) * 100;
-                        progress.style.width = `${percent}%`;
-                        progress.className = 'progress-fill';
-                        if (percent < 25) progress.classList.add('danger');
-                        else if (percent < 50) progress.classList.add('warning');
-                        else progress.classList.remove('danger', 'warning');
-
-                        // Stats
-                        document.getElementById('total-trades').textContent = stats.total_trades;
-                        document.getElementById('win-rate').textContent = `${stats.win_rate.toFixed(1)}%`;
-                        document.getElementById('total-pnl').textContent = stats.total_pnl.toFixed(2);
-                        document.getElementById('total-pnl').style.color = stats.total_pnl >= 0 ? '#22c55e' : '#ef4444';
-                        document.getElementById('open-positions').textContent = stats.open_positions;
+                    if (stats.permission_active && !currentState.permissionActive) {
+                        btnConnect.innerHTML = '<span>✓</span> Permission Active';
+                        btnConnect.disabled = true;
+                        btnRevoke.disabled = false;
+                        toggleSwitch.style.pointerEvents = 'none';
+                        toggleSwitch.style.opacity = '0.5';
+                        currentState.permissionActive = true;
                     }
-                } catch (e) {
-                    // console.error('API Error:', e); // Silence poll errors
-                    statusBadge.className = 'status-badge disconnected';
-                    statusText.textContent = 'Agent Offline';
+
+                    // Update values
+                    dailyLimit.textContent = `$${stats.daily_limit.toFixed(2)}`;
+                    spentToday.textContent = `$${stats.spent_today.toFixed(2)}`;
+                    const rem = stats.daily_limit - stats.spent_today;
+                    remaining.textContent = `$${rem.toFixed(2)}`;
+
+                    // Progress bar
+                    const percent = (rem / stats.daily_limit) * 100;
+                    progress.style.width = `${percent}%`;
+                    progress.className = 'progress-fill';
+                    if (percent < 25) progress.classList.add('danger');
+                    else if (percent < 50) progress.classList.add('warning');
+
+                    // Stats
+                    document.getElementById('total-trades').textContent = stats.total_trades;
+                    document.getElementById('win-rate').textContent = `${stats.win_rate.toFixed(1)}%`;
+                    document.getElementById('total-pnl').textContent = stats.total_pnl.toFixed(2);
+                    document.getElementById('total-pnl').style.color = stats.total_pnl >= 0 ? 'var(--success)' : 'var(--danger)';
+                    document.getElementById('open-positions').textContent = stats.open_positions;
                 }
+            } catch (e) {
+                statusBadge.className = 'status-badge disconnected';
+                statusText.textContent = 'Agent Offline';
+            }
+        }
+
+        // Connect MetaMask & Request Permission
+        btnConnect.addEventListener('click', async () => {
+            if (!window.ethereum) {
+                alert('Please install MetaMask!');
+                return;
             }
 
-            // Connect MetaMask & Request Permission
-            btnConnect.addEventListener('click', async () => {
-                if (!window.ethereum) {
-                    alert('Please install MetaMask!');
-                    return;
-                }
+            try {
+                btnConnect.innerHTML = '<span>⏳</span> Requesting...';
+                btnConnect.disabled = true;
 
-                try {
-                    btnConnect.textContent = 'Requesting...';
+                // 1. Request accounts
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-                    // 1. Request accounts
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-
-                    // 2. Request ERC-7715 Permission
-                    const permission = {
-                        "erc7715:permission": {
-                            type: "spend",
-                            token: {
-                                symbol: "USDC",
-                                address: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
-                            },
-                            limit: {
-                                amount: 10.0,
-                                period: "day"
-                            },
-                            duration: {
-                                days: 30
-                            },
-                            scope: {
-                                protocol: "polymarket"
-                            }
+                // 2. Request ERC-7715 Permission
+                const permission = {
+                    "erc7715:permission": {
+                        type: "spend",
+                        token: {
+                            symbol: "USDC",
+                            address: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+                        },
+                        limit: {
+                            amount: 10.0,
+                            period: "day"
+                        },
+                        duration: {
+                            days: 30
+                        },
+                        scope: {
+                            protocol: "polymarket"
                         }
+                    }
+                };
+
+                let grant;
+
+                if (currentState.useRealPermissions) {
+                    console.log('Attempting REAL ERC-7715 call...');
+                    try {
+                        const response = await window.ethereum.request({
+                            method: 'wallet_requestPermissions',
+                            params: [permission]
+                        });
+                        grant = response[0];
+                        console.log('Real Grant Received:', grant);
+                    } catch (err) {
+                        console.error('Real call failed:', err);
+                        alert('Real ERC-7715 call failed. Please try Demo Mode.');
+                        btnConnect.innerHTML = '<span>⚡</span> Connect MetaMask';
+                        btnConnect.disabled = false;
+                        return;
+                    }
+                } else {
+                    console.log('Using MOCK permissions (Demo Mode)');
+                    await new Promise(r => setTimeout(r, 1000));
+                    grant = {
+                        permission_id: `perm_mock_${Date.now()}`,
+                        token: "USDC",
+                        daily_limit: 10.0,
+                        spent_today: 0.0,
+                        expires_at: Math.floor(Date.now() / 1000) + (30 * 86400),
+                        granted_at: Math.floor(Date.now() / 1000),
+                        revoked: false
                     };
-
-                    let grant;
-
-                    if (currentState.useRealPermissions) {
-                        console.log('Attemping REAL ERC-7715 call...');
-                        try {
-                            const response = await window.ethereum.request({
-                                method: 'wallet_requestPermissions',
-                                params: [permission]
-                            });
-                            grant = response[0]; // Assuming array response
-                            console.log('Real Grant Received:', grant);
-                        } catch (err) {
-                            console.error('Real call failed:', err);
-                            alert('Real ERC-7715 call failed. Falling back to Mock?');
-                            throw err;
-                        }
-                    } else {
-                        console.log('Using MOCK permissions (Demo Mode)');
-                        await new Promise(r => setTimeout(r, 1000));
-                        grant = {
-                            permission_id: `perm_mock_${Date.now()}`,
-                            token: "USDC",
-                            daily_limit: 10.0,
-                            spent_today: 0.0,
-                            expires_at: Math.floor(Date.now() / 1000) + (30 * 86400),
-                            granted_at: Math.floor(Date.now() / 1000),
-                            revoked: false
-                        };
-                    }
-
-                    // 3. Send to Rust Agent
-                    const res = await fetch(`${API_URL}/permission`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(grant)
-                    });
-
-                    if (res.ok) {
-                        alert('Permission granted and sent to Agent!');
-                        fetchStats();
-                    } else {
-                        alert('Failed to update Agent.');
-                    }
-
-                } catch (e) {
-                    console.error(e);
-                    alert('Connection failed: ' + e.message);
-                    btnConnect.textContent = 'Connect MetaMask';
                 }
-            });
 
-            // Start polling
-            setInterval(fetchStats, 1000);
-            fetchStats();
-        </script>
+                // 3. Send to Rust Agent
+                const res = await fetch(`${API_URL}/permission`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(grant)
+                });
+
+                if (res.ok) {
+                    alert('Permission granted and sent to Agent!');
+                    fetchStats();
+                } else {
+                    alert('Failed to update Agent.');
+                    btnConnect.innerHTML = '<span>⚡</span> Connect MetaMask';
+                    btnConnect.disabled = false;
+                }
+
+            } catch (e) {
+                console.error(e);
+                alert('Connection failed: ' + e.message);
+                btnConnect.innerHTML = '<span>⚡</span> Connect MetaMask';
+                btnConnect.disabled = false;
+            }
+        });
+
+        // Fetch and display live markets
+        const marketsGrid = document.getElementById('markets-grid');
+        const marketsCount = document.getElementById('markets-count');
+        const marketsUpdate = document.getElementById('markets-update');
+
+        async function fetchMarkets() {
+            try {
+                const res = await fetch(`${API_URL}/markets`);
+                const data = await res.json();
+
+                // Update metadata
+                marketsCount.textContent = `${data.total_count} markets`;
+                if (data.last_update_ms > 0) {
+                    marketsUpdate.textContent = `Updated ${Math.round(data.last_update_ms / 1000)}s ago`;
+                } else {
+                    marketsUpdate.textContent = 'Never updated';
+                }
+
+                // Render markets
+                if (data.markets && data.markets.length > 0) {
+                    marketsGrid.innerHTML = data.markets.map(m => {
+                        const yesPrice = m.prices[0] || 0.5;
+                        const noPrice = m.prices[1] || 0.5;
+                        const spread = Math.abs((yesPrice + noPrice) - 1) * 100;
+                        const isBalanced = spread < 0.5;
+
+                        return `
+                            <div class="market-item">
+                                <div class="market-question">${escapeHtml(m.question)}</div>
+                                <div class="market-prices">
+                                    <div class="price-badge">
+                                        <span class="price-label">Yes</span>
+                                        <span class="price-value yes">${(yesPrice * 100).toFixed(0)}¢</span>
+                                    </div>
+                                    <div class="price-badge">
+                                        <span class="price-label">No</span>
+                                        <span class="price-value no">${(noPrice * 100).toFixed(0)}¢</span>
+                                    </div>
+                                </div>
+                                <div class="market-spread">
+                                    <span class="spread-label">Spread</span>
+                                    <span class="spread-value ${isBalanced ? 'balanced' : ''}">${spread.toFixed(2)}%</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    marketsGrid.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📡</div>
+                            <div>Waiting for agent to fetch markets...</div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.log('Markets fetch failed:', e);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Start polling
+        setInterval(fetchStats, 1000);
+        setInterval(fetchMarkets, 2000);
+        fetchStats();
+        fetchMarkets();
+    </script>
 </body>
 
 </html>
