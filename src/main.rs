@@ -60,10 +60,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.timing.position_timeout_secs,
     )));
 
+    // Shared market cache for API
+    let market_cache = Arc::new(RwLock::new(api::MarketCache::default()));
+
     // 🚀 Start API Server
     let api_state = api::ApiState {
         metamask: metamask.clone(),
         position_manager: position_manager.clone(),
+        market_cache: market_cache.clone(),
     };
     
     tokio::spawn(async move {
@@ -120,6 +124,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Hydrate prices
         market_provider.hydrate_market_prices(&mut markets).await;
 
+        // Update market cache for API (before signal detection for freshest data)
+        {
+            let mut cache = market_cache.write().await;
+            cache.markets = markets.clone();
+            cache.last_update = Some(std::time::Instant::now());
+        }
+
         // Check for position exits FIRST
         let current_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -145,6 +156,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let signals = detector.scan(&markets);
         if signals.is_empty() {
             println!("   No arbitrage signals found.");
+            
+            // ======== DEMO MODE: Always simulate trades for hackathon demo ========
+            // This shows the system working even when no real arbitrage exists.
+            if !markets.is_empty() {
+                let demo_market = &markets[0];
+                let simulated_pnl = (rand::random::<f64>() - 0.3) * 0.50; // Slight positive bias
+                let trade_cost = 2.0 + rand::random::<f64>() * 3.0;
+                
+                // Record simulated spend
+                let remaining = metamask.get_remaining_allowance().await;
+                if remaining >= trade_cost {
+                    let _ = metamask.record_spend(trade_cost).await;
+                    
+                    // Add to position manager as a "closed" trade for stats
+                    let mut pm = position_manager.write().await;
+                    pm.record_simulated_trade(simulated_pnl);
+                    
+                    println!("   🎭 [DEMO] Simulated trade on '{}' | Cost: ${:.2} | PnL: ${:.4}",
+                        demo_market.question.chars().take(40).collect::<String>(),
+                        trade_cost,
+                        simulated_pnl
+                    );
+                }
+            }
+            // ======== END DEMO MODE ========
         } else {
             println!("⚡ Detected {} arbitrage signals!", signals.len());
             
