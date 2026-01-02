@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🦈 PolyShark Dashboard</title>
-    <meta name="description" content="PolyShark - Permission-safe autonomous trading agent using MetaMask ERC-7715 Advanced Permissions">
+    <meta name="description"
+        content="PolyShark - Permission-safe autonomous trading agent using MetaMask ERC-7715 Advanced Permissions">
     <style>
         * {
             margin: 0;
@@ -144,8 +146,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
         }
 
         .grid {
@@ -454,8 +463,15 @@
         }
 
         @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
         }
 
         .envio-info {
@@ -592,10 +608,12 @@
         }
 
         @media (max-width: 768px) {
+
             .permission-config,
             .permission-center {
                 grid-column: span 1;
             }
+
             .config-grid,
             .permission-details {
                 grid-template-columns: 1fr 1fr;
@@ -603,6 +621,7 @@
         }
 
         @media (max-width: 480px) {
+
             .config-grid,
             .permission-details {
                 grid-template-columns: 1fr;
@@ -610,6 +629,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -710,8 +730,9 @@
                     <div class="envio-info">
                         <div class="title">📡 Envio HyperIndex</div>
                         <div class="metrics">
-                            Index Delay: <span id="envio-delay">--</span>ms • 
-                            Last Update: <span id="envio-last-update">--</span> • 
+                            Index Delay: <span id="envio-delay">--</span>ms •
+                            Block: <span id="envio-block">--</span> •
+                            Errors: <span id="envio-errors">0</span> •
                             Status: <span id="envio-status">Connecting...</span>
                         </div>
                     </div>
@@ -791,7 +812,8 @@
             trades: [],
             envio: {
                 delay: 150,
-                lastUpdate: new Date(),
+                blockHeight: 67234567,
+                errors: 0,
                 status: 'connected',
                 consecutiveFailures: 0
             }
@@ -825,7 +847,8 @@
         const tradesList = document.getElementById('trades-list');
         const envioDot = document.getElementById('envio-dot');
         const envioDelay = document.getElementById('envio-delay');
-        const envioLastUpdate = document.getElementById('envio-last-update');
+        const envioBlock = document.getElementById('envio-block');
+        const envioErrors = document.getElementById('envio-errors');
         const envioStatus = document.getElementById('envio-status');
 
         // Update UI
@@ -941,7 +964,12 @@
         }
 
         function updateEnvioHealth() {
-            if (state.envio.status === 'connected') {
+            // Check for safe mode trigger
+            if (state.envio.delay > 5000 || state.envio.errors >= 3) {
+                envioDot.className = 'dot offline';
+                envioStatus.textContent = 'HALTED';
+                envioStatus.style.color = '#ef4444';
+            } else if (state.envio.status === 'connected') {
                 envioDot.className = state.envio.delay > 1000 ? 'dot delayed' : 'dot';
                 envioStatus.textContent = 'Connected';
                 envioStatus.style.color = '#22c55e';
@@ -952,7 +980,9 @@
             }
 
             envioDelay.textContent = state.envio.delay;
-            envioLastUpdate.textContent = formatTime(state.envio.lastUpdate);
+            envioBlock.textContent = state.envio.blockHeight.toLocaleString();
+            envioErrors.textContent = state.envio.errors;
+            envioErrors.style.color = state.envio.errors > 0 ? '#f59e0b' : 'inherit';
         }
 
         function formatTime(date) {
@@ -966,7 +996,7 @@
                     "type": "spend",
                     "token": {
                         "symbol": state.config.token,
-                        "address": state.config.token === "USDC" 
+                        "address": state.config.token === "USDC"
                             ? "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
                             : "0x..."
                     },
@@ -1087,7 +1117,7 @@
             if (state.permissionGranted && state.agentStatus === 'RUNNING' && Math.random() > 0.7) {
                 const tradeAmount = Math.random() * 2;
                 const pnl = (Math.random() - 0.4) * 0.5;
-                
+
                 if (state.spentToday + tradeAmount <= state.config.dailyLimit) {
                     if (!state.dryRunMode) {
                         state.spentToday += tradeAmount;
@@ -1097,14 +1127,14 @@
                     if (pnl > 0) {
                         state.winRate = Math.round((state.winRate * (state.totalTrades - 1) + 100) / state.totalTrades);
                     }
-                    
+
                     const markets = ['Trump 2024', 'Bitcoin > 100k', 'Fed Rate Cut', 'ETH Flip BTC', 'AI Regulation'];
                     state.trades.unshift({
                         market: markets[Math.floor(Math.random() * markets.length)],
                         time: new Date().toLocaleTimeString(),
                         pnl: pnl
                     });
-                    
+
                     if (state.trades.length > 10) state.trades.pop();
                 }
             }
@@ -1123,4 +1153,5 @@
         updateUI();
     </script>
 </body>
+
 </html>
