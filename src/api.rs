@@ -4,6 +4,7 @@
 
 use warp::Filter;
 use std::sync::Arc;
+use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use crate::metamask::{MetaMaskClient, PermissionGrant};
 use crate::positions::PositionManager;
@@ -67,9 +68,24 @@ pub async fn start_server(state: ApiState) {
         .and(with_state(state.clone()))
         .and_then(handle_markets);
 
+    // Serve dashboard static files
+    // Get the dashboard directory path (relative to executable or use manifest dir for dev)
+    let dashboard_dir = get_dashboard_path();
+    println!("📂 [API] Serving dashboard from: {:?}", dashboard_dir);
+    
+    // Serve index.html at root path
+    let index_route = warp::path::end()
+        .and(warp::get())
+        .and(warp::fs::file(dashboard_dir.join("index.html")));
+    
+    // Serve other static files from dashboard directory
+    let static_route = warp::fs::dir(dashboard_dir);
+
     let routes = permission_route
         .or(stats_route)
         .or(markets_route)
+        .or(index_route)
+        .or(static_route)
         .with(cors);
 
     println!("🌍 [API] Server starting on http://localhost:3030");
@@ -176,4 +192,26 @@ async fn handle_markets(state: ApiState) -> Result<impl warp::Reply, warp::Rejec
     };
     
     Ok(warp::reply::json(&response))
+}
+
+/// Get the path to the dashboard directory
+/// Uses CARGO_MANIFEST_DIR during development, falls back to current directory
+fn get_dashboard_path() -> PathBuf {
+    // In development, use the manifest directory
+    if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        return PathBuf::from(manifest_dir).join("dashboard");
+    }
+    
+    // In production, look for dashboard next to the executable
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let dashboard_path = exe_dir.join("dashboard");
+            if dashboard_path.exists() {
+                return dashboard_path;
+            }
+        }
+    }
+    
+    // Fallback to current directory
+    PathBuf::from("dashboard")
 }
