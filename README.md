@@ -249,8 +249,7 @@ Developers using [`create-gator-app`](https://github.com/MetaMask/create-gator-a
 
 ```bash
 # Clone and configure
-git clone https://github.com/your-username/polyshark
-cd polyshark
+git clone https://github.com/dinxsh/polyshark
 cp .env.example .env  # Add your keys
 
 # Build and run
