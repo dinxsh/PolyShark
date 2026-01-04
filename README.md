@@ -2,275 +2,176 @@
 
 > *"If markets contradict themselves, eat the contradiction."*
 
-**PolyShark** is a **permission-safe arbitrage agent** for Polymarket, built for the MetaMask x Envio Hackathon. It detects logical mispricing between linked prediction markets and executes trades automatically within user-defined limits using **ERC-7715 Advanced Permissions**.
+<p align="center">
+  <img src="./assets/polyshark-logo.png" alt="PolyShark" width="180"/>
+</p>
+
+**Permission-safe arbitrage agent** for Polymarket using **ERC-7715 Advanced Permissions** + **Envio HyperIndex**.
+
+[![MetaMask](https://img.shields.io/badge/MetaMask-ERC--7715-orange?style=flat-square&logo=metamask)](https://eips.ethereum.org/EIPS/eip-7715)
+[![Envio](https://img.shields.io/badge/Envio-HyperIndex-blue?style=flat-square)](https://docs.envio.dev/)
+[![Rust](https://img.shields.io/badge/Rust-Agent-black?style=flat-square&logo=rust)](https://www.rust-lang.org/)
+[![Polygon](https://img.shields.io/badge/Polygon-Mainnet-purple?style=flat-square)](https://polygon.technology/)
 
 ---
 
-## 🎯 TL;DR for Judges
+## ⚡ The Problem → Solution
 
-| What Makes PolyShark Special |
-|------------------------------|
-| 🔐 **ERC-7715 Permission System** — Cryptographically enforced daily USDC limits, not just trust |
-| 📡 **Envio-Powered Safety** — Low-latency HyperIndex enables safe automation; agent halts on stale data |
-| 🤖 **Zero-Popup Trading** — Once granted, trades execute autonomously without wallet confirmations |
-| 🛡️ **Adaptive Strategy** — Trading behavior adjusts based on remaining allowance |
+| Traditional Bots | PolyShark + ERC-7715 |
+|------------------|----------------------|
+| ❌ Popup every trade | ✅ **One popup, then autonomous** |
+| ❌ Trust-based limits | ✅ **Cryptographic enforcement** |
+| ❌ Unlimited risk | ✅ **$10/day max, instant revoke** |
+| ❌ No data freshness | ✅ **Halts on stale data** |
 
-> **[🎬 Demo Video](https://youtube.com/watch?v=YOUR_VIDEO_ID)** | **[🌐 Live Dashboard](https://your-username.github.io/polyshark-dashboard/)**
-
----
-
-## ⚡ Before vs. After: The Permission Revolution
-
-| | **Traditional Bots** | **PolyShark + ERC-7715** |
-|---|----------------------|--------------------------|
-| **Wallet Popups** | ❌ Every single trade | ✅ **One popup, then autonomous** |
-| **Spend Control** | ❌ Trust-based limits | ✅ **Cryptographically enforced** |
-| **User Control** | ❌ Must stop the bot | ✅ **Instant revocation** |
-| **Risk Exposure** | ❌ Unlimited until stopped | ✅ **$10/day maximum** |
-| **Data Freshness** | ❌ No guarantees | ✅ **Agent halts if data >5s stale** |
-
-> 💡 **Key insight:** This is the last popup you'll see for the next thousand trades.
+> 💡 This is the **last popup** you'll see for the next thousand trades.
 
 ---
 
-## 🛡️ Why Envio Makes This Safe (Not Reckless)
+## 🎯 How It Works
 
-**Without Envio, autonomous trading is dangerous.** Stale data leads to bad trades.
+```
+USER → Grant Permission (once)
+        ↓
+MetaMask Smart Account (ERC-7715) → Enforced Daily Limit
+        ↓
+PolyShark Agent (Rust)
+├── Constraint Engine    → YES + NO = 1 violations
+├── Arbitrage Detector   → Expected profit calculation
+└── Execution Engine     → Permission-validated trades
+        ↓                       ↑
+Polymarket Contracts ←── Envio HyperIndex (~150ms)
+```
 
-PolyShark uses **Envio HyperIndex** as its safety gate:
+**5 Steps:** Detect mispricing → Validate allowance → Execute trade → Adapt strategy → Halt if stale
 
-| Protection | How It Works |
-|------------|--------------|
-| **Latency Monitoring** | Dashboard shows real-time index delay (~150ms typical) |
-| **Automatic Halt** | Agent enters safe mode if delay exceeds 5 seconds |
-| **Block Height Tracking** | Always know exactly how fresh your data is |
-| **Error Counting** | Consecutive failures trigger cooldown |
+---
+
+## 🛡️ Safety by Design
+
+| Layer | Protection |
+|-------|------------|
+| **ERC-7715** | Cryptographic daily limits, instant revocation |
+| **Envio** | ~150ms latency, auto-halt if >5s stale |
+| **Strategy** | Aggressive→Normal→Conservative based on budget |
+| **Failures** | 3 strikes → Safe mode (5 min cooldown) |
 
 ```toml
-# config.toml - Safety thresholds
+# config.toml
 [safety]
-max_data_delay_ms = 5000         # Suspend trading if Envio delay exceeds this
-max_consecutive_failures = 3     # Enter safe mode after N API failures
-safe_mode_cooldown_secs = 300    # Wait 5 minutes before retrying
+max_data_delay_ms = 5000
+max_consecutive_failures = 3
 ```
-
-> ⚠️ **Critical:** PolyShark's safety depends on Envio's reliability. Without Envio + ERC-7715, this kind of bot would be dangerous. With them, it becomes safe.
 
 ---
 
-## 🏆 Hackathon Highlights
+## 🏗️ Architecture
 
-| Feature | Implementation |
-|---------|----------------|
-| **Smart Accounts** | MetaMask Smart Account with ERC-7715 |
-| **Advanced Permissions** | Daily USDC spend limits (configurable 5-50 USDC/day) |
-| **Automation** | Zero-popup trading after permission grant |
-| **On-Chain Integration** | Polymarket via Envio HyperIndex |
-| **Adaptive Strategy** | Conservative/Normal/Aggressive modes |
-
-> 📘 **Full Architecture:** [docs/metamask/v1.md](./docs/metamask/v1.md)
-
----
-
-## 🎯 What It Does
-
-1. **Detects** logical arbitrage (when YES + NO ≠ 1)
-2. **Validates** against ERC-7715 permission allowance
-3. **Executes** trades automatically (zero wallet popups)
-4. **Adapts** strategy based on remaining budget
-5. **Halts** if Envio data becomes stale
-
----
-
-## 🧠 Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       USER                                   │
-│              ↓ Grant Permission (once)                       │
-├─────────────────────────────────────────────────────────────┤
-│            MetaMask Smart Account (ERC-7715)                 │
-│                    ↓ Enforced Daily Limit                    │
-├─────────────────────────────────────────────────────────────┤
-│               PolyShark Agent (Rust)                         │
-│    ┌──────────────┬──────────────┬──────────────┐           │
-│    │ Constraint   │ Arbitrage    │ Execution    │           │
-│    │ Engine       │ Detector     │ Engine       │           │
-│    └──────────────┴──────────────┴──────────────┘           │
-│                    ↓                ↑                        │
-├─────────────────────────────────────────────────────────────┤
-│              Polymarket Contracts                            │
-│                    ↑                                         │
-├─────────────────────────────────────────────────────────────┤
-│              Envio HyperIndex                                │
-│         (Low-latency market state + safety gate)             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Module Structure
+<p align="center">
+  <img src="./assets/architecture-flow.png" alt="Architecture" width="600"/>
+</p>
 
 ```
 src/
-├── metamask.rs      → ERC-7715 client, strategy modes
-├── wallet.rs        → Permission-aware adapter
-├── market.rs        → Envio-sourced market data
-├── constraint.rs    → Logical relationships
-├── arb.rs           → Arbitrage detection
-├── engine.rs        → Main trading loop with safety
-└── config.rs        → Configuration system
+├── metamask.rs    → ERC-7715 client, strategy modes
+├── wallet.rs      → Permission-aware execution
+├── market.rs      → Envio data consumer
+├── constraint.rs  → Logical arbitrage (YES+NO=1)
+├── arb.rs         → Profit calculation
+├── execution.rs   → Trade engine (fees, slippage, fills)
+└── engine.rs      → Main loop + safety halt
 ```
 
 ---
 
-## 📊 Permission Specification
-
-PolyShark requests the following ERC-7715 permission:
-
-| Property | Value |
-|----------|-------|
-| **Type** | Spend permission |
-| **Token** | USDC (0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174) |
-| **Limit** | 10 USDC per day (configurable) |
-| **Duration** | 30 days (configurable) |
-| **Scope** | Polymarket trading adapter |
-
-### Permission JSON
+## 📊 Permission Spec
 
 ```json
 {
   "erc7715:permission": {
     "type": "spend",
-    "token": {
-      "symbol": "USDC",
-      "address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
-    },
+    "token": { "symbol": "USDC", "address": "0x2791Bca1f2..." },
     "limit": { "amount": 10.0, "period": "day" },
     "duration": { "days": 30 },
-    "scope": { "protocol": "polymarket" },
-    "metadata": {
-      "title": "PolyShark Trading Permission",
-      "description": "PolyShark may automatically trade up to 10 USDC per day."
-    }
+    "scope": { "protocol": "polymarket" }
   }
 }
 ```
 
-> *"PolyShark may automatically trade up to 10 USDC per day on your behalf. You can revoke this permission at any time."*
-
----
-
-## 📡 Envio Integration
-
-### Example Query
-
-```graphql
-query GetMarketState($conditionId: String!) {
-  Market(where: { conditionId: { _eq: $conditionId } }) {
-    question
-    outcomes
-    outcomePrices
-    volume
-    liquidity
-    lastTradePrice
-    updatedAt
-  }
-}
-```
-
-### Dashboard Health Metrics
-
-The dashboard shows live Envio status:
-- **Index Delay** — Milliseconds behind chain head
-- **Last Indexed Block** — Exact block number
-- **API Errors (24h)** — Consecutive failure count
-- **Connection Status** — Connected/Delayed/Offline
-
----
-
-## 🔧 Use PolyShark as a Template
-
-PolyShark is designed as a **reference implementation for ERC-7715-powered agents**, not just a Polymarket bot. The architecture cleanly separates:
-
-- **Permission Layer** (`metamask.rs`, `wallet.rs`) — Handles Smart Account integration and daily limit enforcement via the Delegation Toolkit pattern
-- **Data Layer** (`market.rs`, `websocket.rs`) — Consumes Envio HyperIndex; swap for any other indexer
-- **Logic Layer** (`constraint.rs`, `arb.rs`) — Domain-specific arbitrage detection; replace with your DEX routing, NFT bidding, or game automation logic
-
-### To Adapt for a Different Protocol
-
-1. Replace `market.rs` with your data source (e.g., Uniswap subgraph)
-2. Rewrite `constraint.rs` with your domain constraints
-3. Keep the permission layer unchanged — it already handles ERC-7715 lifecycle
-4. Update `config.toml` with your parameters
-
-Developers using [`create-gator-app`](https://github.com/MetaMask/create-gator-app) can reference this architecture to build their own permissioned agents.
-
-> See [`examples/gator-bridge.ts`](./examples/gator-bridge.ts) for a minimal TypeScript example using the Smart Accounts Kit.
-
----
-
-## 🔧 Execution Realism
-
-| Parameter | Description |
-|-----------|-------------|
-| **Fees** | Taker/maker fees from Polymarket API |
-| **Slippage** | Non-linear price impact from order book |
-| **Partial Fills** | Orders may not fully execute |
-| **Latency** | Delay between signal and execution |
-| **Position Sizing** | Dynamic sizing based on risk & liquidity |
-
----
-
-## 📚 Documentation
-
-| Doc | Purpose |
-|-----|---------|
-| [docs/metamask/v1.md](./docs/metamask/v1.md) | ERC-7715 architecture |
-| [docs/spec.md](./docs/spec.md) | Technical specification |
-| [docs/math.md](./docs/math.md) | Mathematical foundations |
-| [docs/polymarket.md](./docs/polymarket.md) | API reference |
-| [docs/implementation.md](./docs/implementation.md) | Build guide |
-| [docs/demo-script.md](./docs/demo-script.md) | Demo walkthrough |
+| Property | Value |
+|----------|-------|
+| Token | USDC (Polygon) |
+| Limit | 10 USDC/day (configurable 5-50) |
+| Duration | 30 days |
+| Revocation | Instant, one-click |
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| **Language** | Rust |
-| **Wallet** | MetaMask Smart Account |
-| **Permissions** | ERC-7715 |
-| **Market Data** | Envio HyperIndex |
-| **Target Chain** | Polygon Mainnet (Chain ID: 137) |
+| Component | Tech |
+|-----------|------|
+| Agent | Rust (async, high-perf) |
+| Wallet | MetaMask Smart Account |
+| Permissions | ERC-7715 |
+| Data | Envio HyperIndex |
+| Chain | Polygon (137) |
+| UI | HTML/CSS/JS Dashboard |
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# Clone and configure
 git clone https://github.com/dinxsh/polyshark
-cp .env.example .env  # Add your keys
-
-# Build and run
-cargo build --release
-cargo run
+cp .env.example .env
+cargo build --release && cargo run
 ```
 
-Open `dashboard/index.html` in your browser to interact with the agent.
+Open `dashboard/index.html` → Connect MetaMask → Grant permission → Watch autonomous trading.
 
 ---
 
-## 📄 License
+## 📈 Strategy Modes
 
-MIT License — See [LICENSE](./LICENSE) for details.
+| Mode | Budget | Min Edge |
+|------|--------|----------|
+| 🟢 Aggressive | >70% left | ≥1% |
+| 🟡 Normal | 30-70% | ≥2% |
+| 🔴 Conservative | <30% | ≥5% |
 
 ---
 
-## 🔗 Related Resources
+## 🔧 Use as Template
 
-- [Delegation Toolkit](https://docs.metamask.io/smart-accounts/delegation-toolkit)
-- [Smart Accounts Kit](https://docs.metamask.io/smart-accounts)
-- [ERC-7715 Spec](https://eips.ethereum.org/EIPS/eip-7715)
-- [create-gator-app](https://github.com/MetaMask/create-gator-app)
-- [Envio HyperIndex](https://docs.envio.dev/)
+PolyShark = **reference implementation** for ERC-7715 agents.
+
+**Swap layers:**
+- `market.rs` → Your data source (Uniswap, OpenSea, etc.)
+- `constraint.rs` → Your domain logic (DEX routes, NFT bids)
+- Keep permission layer unchanged
+
+> See [`examples/gator-bridge.ts`](./examples/gator-bridge.ts) for TypeScript example.
+
+---
+
+## 📚 Docs
+
+| Doc | Purpose |
+|-----|---------|
+| [metamask/v1.md](./docs/metamask/v1.md) | ERC-7715 Architecture |
+| [spec.md](./docs/spec.md) | Technical Spec |
+| [demo-script.md](./docs/demo-script.md) | Demo Walkthrough |
+| [HACKQUEST_SUBMISSION.md](./docs/HACKQUEST_SUBMISSION.md) | Hackathon Submission |
+
+---
+
+## 🔗 Resources
+
+[Delegation Toolkit](https://docs.metamask.io/smart-accounts/delegation-toolkit) • [Smart Accounts](https://docs.metamask.io/smart-accounts) • [ERC-7715](https://eips.ethereum.org/EIPS/eip-7715) • [create-gator-app](https://github.com/MetaMask/create-gator-app) • [Envio](https://docs.envio.dev/)
+
+---
+
+<p align="center">
+  <b>MIT License</b> • Built for MetaMask x Envio Hackathon
+</p>
