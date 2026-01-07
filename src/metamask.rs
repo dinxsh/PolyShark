@@ -1,11 +1,11 @@
 //! MetaMask SDK Integration Module
-//! 
+//!
 //! Provides ERC-7715 Advanced Permissions integration for the PolyShark agent.
 //! This module handles permission requests, allowance tracking, and transaction submission.
 
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
 
 /// Permission grant from MetaMask
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,7 +56,7 @@ pub enum AgentStatus {
 }
 
 /// MetaMask Smart Account Client
-/// 
+///
 /// Handles ERC-7715 permission lifecycle:
 /// 1. Request permission from user
 /// 2. Track remaining allowance
@@ -114,7 +114,7 @@ impl MetaMaskClient {
     }
 
     /// Get current strategy mode based on remaining allowance
-    /// 
+    ///
     /// - Conservative: < 30% remaining (high-edge trades only)
     /// - Normal: 30-70% remaining (standard trading)
     /// - Aggressive: > 70% remaining (more frequent trades)
@@ -124,7 +124,7 @@ impl MetaMaskClient {
             Some(p) => {
                 let remaining = (p.daily_limit - p.spent_today).max(0.0);
                 let percent = remaining / p.daily_limit;
-                
+
                 if percent < 0.30 {
                     StrategyMode::Conservative
                 } else if percent > 0.70 {
@@ -158,33 +158,44 @@ impl MetaMaskClient {
     pub async fn set_permission(&self, grant: PermissionGrant) {
         *self.permission.write().await = Some(grant.clone());
         *self.status.write().await = ConnectionStatus::PermissionGranted;
-        println!("✅ [MetaMask] Permission updated via API: {}", grant.permission_id);
+        println!(
+            "✅ [MetaMask] Permission updated via API: {}",
+            grant.permission_id
+        );
     }
 
     /// Connect to MetaMask wallet
-    /// 
+    ///
     /// In production, this would use window.ethereum or Snap RPC
     /// For demo, we simulate the connection
     pub async fn connect(&self) -> Result<String, MetaMaskError> {
         *self.status.write().await = ConnectionStatus::Connecting;
-        
+
         // Simulate connection delay
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        
+
         // Demo: Generate a fake address
-        let address = format!("0x{}", hex::encode(&[0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
-                                                    0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F]));
-        
+        let address = format!(
+            "0x{}",
+            hex::encode(&[
+                0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
+                0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F
+            ])
+        );
+
         *self.wallet_address.write().await = Some(address.clone());
         *self.status.write().await = ConnectionStatus::Connected;
-        
-        println!("🦊 [MetaMask] Connected to Smart Account: {}", &address[..10]);
-        
+
+        println!(
+            "🦊 [MetaMask] Connected to Smart Account: {}",
+            &address[..10]
+        );
+
         Ok(address)
     }
 
     /// Request ERC-7715 spend permission
-    /// 
+    ///
     /// This would show a MetaMask popup asking user to approve:
     /// "PolyShark may automatically trade up to {limit} USDC per day"
     pub async fn request_permission(
@@ -199,15 +210,15 @@ impl MetaMaskClient {
         }
 
         *self.status.write().await = ConnectionStatus::PermissionPending;
-        
+
         println!("🔐 [MetaMask] Requesting ERC-7715 Permission...");
         println!("   Token: {}", token);
         println!("   Daily Limit: ${:.2}", daily_limit);
         println!("   Duration: {} days", duration_days);
-        
+
         // Simulate user approval delay
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-        
+
         // Create permission grant
         let now = Self::current_timestamp();
         let grant = PermissionGrant {
@@ -219,21 +230,21 @@ impl MetaMaskClient {
             granted_at: now,
             revoked: false,
         };
-        
+
         *self.permission.write().await = Some(grant.clone());
         *self.status.write().await = ConnectionStatus::PermissionGranted;
-        
+
         println!("✅ [MetaMask] Permission Granted!");
         println!("   ID: {}", grant.permission_id);
         println!("   Expires: {} days from now", duration_days);
-        
+
         Ok(grant)
     }
 
     /// Record a spend against the permission
     pub async fn record_spend(&self, amount: f64) -> Result<(), MetaMaskError> {
         let mut perm = self.permission.write().await;
-        
+
         match &mut *perm {
             Some(p) => {
                 if p.revoked {
@@ -245,7 +256,7 @@ impl MetaMaskClient {
                 if p.spent_today + amount > p.daily_limit {
                     return Err(MetaMaskError::InsufficientAllowance);
                 }
-                
+
                 p.spent_today += amount;
                 Ok(())
             }
@@ -265,7 +276,7 @@ impl MetaMaskClient {
     /// Revoke the current permission
     pub async fn revoke_permission(&self) -> Result<(), MetaMaskError> {
         let mut perm = self.permission.write().await;
-        
+
         match &mut *perm {
             Some(p) => {
                 p.revoked = true;
@@ -336,28 +347,28 @@ mod tests {
     #[tokio::test]
     async fn test_permission_lifecycle() {
         let client = MetaMaskClient::new();
-        
+
         // Connect
         let addr = client.connect().await.unwrap();
         assert!(addr.starts_with("0x"));
         assert_eq!(client.get_status().await, ConnectionStatus::Connected);
-        
+
         // Request permission
         let perm = client.request_permission("USDC", 10.0, 30).await.unwrap();
         assert_eq!(perm.daily_limit, 10.0);
         assert!(client.has_valid_permission().await);
-        
+
         // Check allowance
         assert_eq!(client.get_remaining_allowance().await, 10.0);
-        
+
         // Record spend
         client.record_spend(3.0).await.unwrap();
         assert_eq!(client.get_remaining_allowance().await, 7.0);
-        
+
         // Try to overspend
         let result = client.record_spend(8.0).await;
         assert!(matches!(result, Err(MetaMaskError::InsufficientAllowance)));
-        
+
         // Revoke
         client.revoke_permission().await.unwrap();
         assert!(!client.has_valid_permission().await);

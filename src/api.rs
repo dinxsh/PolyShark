@@ -2,15 +2,15 @@
 //!
 //! Exposes endpoints for the dashboard to control the agent and view stats.
 
-use warp::Filter;
-use std::sync::Arc;
-use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
 use crate::metamask::{MetaMaskClient, PermissionGrant};
 use crate::positions::PositionManager;
 use crate::types::Market;
-use tokio::sync::RwLock;
+use serde::Serialize;
+use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
+use tokio::sync::RwLock;
+use warp::Filter;
 
 /// Cached market data with timestamp
 #[derive(Clone)]
@@ -72,12 +72,12 @@ pub async fn start_server(state: ApiState) {
     // Get the dashboard directory path (relative to executable or use manifest dir for dev)
     let dashboard_dir = get_dashboard_path();
     println!("📂 [API] Serving dashboard from: {:?}", dashboard_dir);
-    
+
     // Serve index.html at root path
     let index_route = warp::path::end()
         .and(warp::get())
         .and(warp::fs::file(dashboard_dir.join("index.html")));
-    
+
     // Serve other static files from dashboard directory
     let static_route = warp::fs::dir(dashboard_dir);
 
@@ -92,7 +92,9 @@ pub async fn start_server(state: ApiState) {
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
 
-fn with_state(state: ApiState) -> impl Filter<Extract = (ApiState,), Error = std::convert::Infallible> + Clone {
+fn with_state(
+    state: ApiState,
+) -> impl Filter<Extract = (ApiState,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || state.clone())
 }
 
@@ -101,11 +103,14 @@ async fn handle_permission(
     grant: PermissionGrant, // Frontend sends the grant object directly
     state: ApiState,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    println!("📥 [API] Received permission grant from Dashboard: {}", grant.permission_id);
-    
+    println!(
+        "📥 [API] Received permission grant from Dashboard: {}",
+        grant.permission_id
+    );
+
     // Update the MetaMask client
     state.metamask.set_permission(grant).await;
-    
+
     Ok(warp::reply::json(&serde_json::json!({ "status": "ok" })))
 }
 
@@ -168,29 +173,33 @@ struct MarketsResponse {
 /// Handle markets request
 async fn handle_markets(state: ApiState) -> Result<impl warp::Reply, warp::Rejection> {
     let cache = state.market_cache.read().await;
-    
-    let last_update_ms = cache.last_update
+
+    let last_update_ms = cache
+        .last_update
         .map(|t| t.elapsed().as_millis() as u64)
         .unwrap_or(0);
-    
-    let markets: Vec<MarketInfo> = cache.markets.iter().take(20).map(|m| {
-        MarketInfo {
+
+    let markets: Vec<MarketInfo> = cache
+        .markets
+        .iter()
+        .take(20)
+        .map(|m| MarketInfo {
             id: m.id.clone(),
             question: m.question.clone(),
             slug: m.slug.clone(),
             outcomes: m.outcomes.clone(),
             prices: m.outcome_prices.clone(),
             active: m.active,
-        }
-    }).collect();
-    
+        })
+        .collect();
+
     let response = MarketsResponse {
         total_count: cache.markets.len(),
         markets,
         last_update_ms,
         signal_count: cache.signal_count,
     };
-    
+
     Ok(warp::reply::json(&response))
 }
 
@@ -201,7 +210,7 @@ fn get_dashboard_path() -> PathBuf {
     if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
         return PathBuf::from(manifest_dir).join("dashboard");
     }
-    
+
     // In production, look for dashboard next to the executable
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
@@ -211,7 +220,7 @@ fn get_dashboard_path() -> PathBuf {
             }
         }
     }
-    
+
     // Fallback to current directory
     PathBuf::from("dashboard")
 }

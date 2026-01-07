@@ -1,5 +1,5 @@
 //! WebSocket streaming module for real-time price updates
-//! 
+//!
 //! Connects to Polymarket's WebSocket API for low-latency price feeds.
 
 use futures_util::{SinkExt, StreamExt};
@@ -28,10 +28,7 @@ pub enum WsMessage {
         timestamp: u64,
     },
     #[serde(rename = "book_update")]
-    BookUpdate {
-        market_id: String,
-        timestamp: u64,
-    },
+    BookUpdate { market_id: String, timestamp: u64 },
     #[serde(other)]
     Unknown,
 }
@@ -111,50 +108,61 @@ impl WebSocketClient {
     #[allow(dead_code)]
     pub async fn connect(&self, market_ids: Vec<String>) -> Result<(), WsError> {
         *self.status.write().await = WsStatus::Connecting;
-        
-        println!("📡 [WebSocket] Connecting to {}...", &self.url[..50.min(self.url.len())]);
-        
+
+        println!(
+            "📡 [WebSocket] Connecting to {}...",
+            &self.url[..50.min(self.url.len())]
+        );
+
         let (ws_stream, _) = connect_async(&self.url)
             .await
             .map_err(|e| WsError::ConnectionFailed(e.to_string()))?;
-        
+
         let (mut write, mut read) = ws_stream.split();
-        
+
         *self.status.write().await = WsStatus::Connected;
         println!("✅ [WebSocket] Connected!");
-        
+
         // Subscribe to markets
         let subscribe_msg = SubscribeRequest {
             msg_type: "subscribe".to_string(),
             channel: "market".to_string(),
             markets: market_ids,
         };
-        
+
         let msg = serde_json::to_string(&subscribe_msg)
             .map_err(|e| WsError::SerializeError(e.to_string()))?;
-        
-        write.send(Message::Text(msg.into())).await
+
+        write
+            .send(Message::Text(msg.into()))
+            .await
             .map_err(|e| WsError::SendError(e.to_string()))?;
-        
+
         println!("📝 [WebSocket] Subscribed to market channel");
-        
+
         // Start reading messages
         let tx = self.tx.clone();
         let price_cache = self.price_cache.clone();
         let status = self.status.clone();
-        
+
         tokio::spawn(async move {
             while let Some(msg) = read.next().await {
                 match msg {
                     Ok(Message::Text(text)) => {
                         if let Ok(ws_msg) = serde_json::from_str::<WsMessage>(&text) {
                             // Update cache
-                            if let WsMessage::PriceUpdate { ref token_id, price, timestamp, .. } = ws_msg {
+                            if let WsMessage::PriceUpdate {
+                                ref token_id,
+                                price,
+                                timestamp,
+                                ..
+                            } = ws_msg
+                            {
                                 let mut cache = price_cache.write().await;
                                 cache.prices.insert(token_id.clone(), price);
                                 cache.last_update = timestamp;
                             }
-                            
+
                             // Broadcast to subscribers
                             let _ = tx.send(ws_msg);
                         }
@@ -173,7 +181,7 @@ impl WebSocketClient {
                 }
             }
         });
-        
+
         Ok(())
     }
 }

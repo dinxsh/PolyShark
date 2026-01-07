@@ -1,5 +1,5 @@
+use rand_distr::{Distribution, Normal};
 use std::time::Duration;
-use rand_distr::{Normal, Distribution};
 
 /// Latency and adverse selection model
 #[derive(Debug, Clone)]
@@ -23,14 +23,14 @@ impl LatencyModel {
         let mut rng = rand::thread_rng();
         // Fallback to simpler math if distribution creation fails, but Normal should work for std >= 0
         let move_pct = if self.adverse_move_std > 0.0 {
-             let normal = Normal::new(0.0, self.adverse_move_std).unwrap();
-             normal.sample(&mut rng)
+            let normal = Normal::new(0.0, self.adverse_move_std).unwrap();
+            normal.sample(&mut rng)
         } else {
             0.0
         };
-        
+
         let new_price = signal_price * (1.0 + move_pct);
-        
+
         (new_price, delay)
     }
 }

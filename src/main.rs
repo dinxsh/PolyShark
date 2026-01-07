@@ -1,38 +1,76 @@
+mod api;
+mod arb;
+mod config;
+mod constraint;
+mod engine;
+mod execution;
+mod fee_calibrator;
+mod fees;
+mod fills;
+mod latency;
+mod market;
+mod metamask;
+mod positions;
+mod simulation;
+mod slippage;
+mod solana;
 mod types;
 mod wallet;
-mod fees;
-mod fee_calibrator;
-mod slippage;
-mod fills;
-mod constraint;
-mod arb;
-mod execution;
-mod engine;
-mod simulation;
-mod market;
-mod latency;
-mod solana;
-mod metamask;
-mod config;
 mod websocket;
-mod positions;
-mod api;
 
-use crate::wallet::Wallet;
-use crate::market::MarketDataProvider;
 use crate::arb::ArbitrageDetector;
+use crate::config::{Config, StrategyConfig};
 use crate::execution::ExecutionEngine;
 use crate::fees::FeeModel;
-use crate::solana::SolanaManager;
 use crate::latency::LatencyModel;
-use crate::types::Side;
-use crate::config::Config;
+use crate::market::MarketDataProvider;
 use crate::metamask::MetaMaskClient;
 use crate::positions::{Position, PositionManager};
-use std::time::Duration;
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use crate::solana::SolanaManager;
+use crate::types::Side;
+use crate::wallet::Wallet;
 use colored::*;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::RwLock;
+
+/// Get the minimum edge required based on remaining allowance percentage
+fn get_min_edge_for_allowance(remaining: f64, daily_limit: f64, strategy: &StrategyConfig) -> f64 {
+    if daily_limit <= 0.0 {
+        return strategy.conservative_min_edge;
+    }
+
+    let remaining_pct = remaining / daily_limit;
+
+    if remaining_pct < strategy.conservative_threshold {
+        strategy.conservative_min_edge // < 30% remaining: require 5% edge
+    } else if remaining_pct > strategy.aggressive_threshold {
+        strategy.aggressive_min_edge // > 70% remaining: accept 1% edge
+    } else {
+        strategy.normal_min_edge // 30-70%: require 2% edge
+    }
+}
+
+/// Get strategy mode name for display
+fn get_strategy_mode_name(
+    remaining: f64,
+    daily_limit: f64,
+    strategy: &StrategyConfig,
+) -> &'static str {
+    if daily_limit <= 0.0 {
+        return "Conservative";
+    }
+
+    let remaining_pct = remaining / daily_limit;
+
+    if remaining_pct < strategy.conservative_threshold {
+        "Conservative"
+    } else if remaining_pct > strategy.aggressive_threshold {
+        "Aggressive"
+    } else {
+        "Normal"
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -42,21 +80,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Config::default_config()
     });
 
-    println!("\n{}", "=======================================================".bright_blue());
-    println!(" {} {}", "🦈".cyan(), "PolyShark v2.0 (Hackathon Release)".bold().cyan());
+    println!(
+        "\n{}",
+        "=======================================================".bright_blue()
+    );
+    println!(
+        " {} {}",
+        "🦈".cyan(),
+        "PolyShark v2.0 (Hackathon Release)".bold().cyan()
+    );
     println!("   - {}", "Permissioned Autonomous Agent".white());
-    println!("   - Powered by {}", "MetaMask Advanced Permissions (ERC-7715)".yellow());
-    println!("   - Multi-Chain Ready: {} + {}", "Polymarket".purple(), "Solana".green());
+    println!(
+        "   - Powered by {}",
+        "MetaMask Advanced Permissions (ERC-7715)".yellow()
+    );
+    println!(
+        "   - Multi-Chain Ready: {} + {}",
+        "Polymarket".purple(),
+        "Solana".green()
+    );
     println!("   - Hybrid DApp: {}", "Enabled (API Port 3030)".purple());
-    println!("{}", "=======================================================\n".bright_blue());
+    println!(
+        "{}",
+        "=======================================================\n".bright_blue()
+    );
 
     // Initialize Components (Shared State)
     let metamask = Arc::new(MetaMaskClient::new());
-    
+
     // Position manager for exit logic (Shared)
     let position_manager = Arc::new(RwLock::new(PositionManager::new(
-        0.005,  // 0.5% profit target spread
-        0.02,   // 2% stop loss spread
+        0.005, // 0.5% profit target spread
+        0.02,  // 2% stop loss spread
         config.timing.position_timeout_secs,
     )));
 
@@ -69,15 +124,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         position_manager: position_manager.clone(),
         market_cache: market_cache.clone(),
     };
-    
+
     tokio::spawn(async move {
         api::start_server(api_state).await;
     });
 
-    println!("{} Market Data:   Envio Indexer...           {}", "📡 [Init]".bold().yellow(), "Connected.".green());
+    println!(
+        "{} Market Data:   Envio Indexer...           {}",
+        "📡 [Init]".bold().yellow(),
+        "Connected.".green()
+    );
 
     // Solana Check
-    print!("{} Solana Devnet:  Connecting... ", "☀️ [Init]".bold().yellow());
+    print!(
+        "{} Solana Devnet:  Connecting... ",
+        "☀️ [Init]".bold().yellow()
+    );
     let sol_manager = SolanaManager::new();
     match sol_manager.check_connection() {
         Ok(v) => println!("{}", format!("Connected! (v{})", v).green()),
@@ -85,7 +147,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Initialize components from config
-    let fee_model = FeeModel { maker_fee_bps: 0, taker_fee_bps: 200 };
+    let fee_model = FeeModel {
+        maker_fee_bps: 0,
+        taker_fee_bps: 200,
+    };
     let mut wallet = Wallet::new(config.permission.daily_limit_usdc);
     let market_provider = MarketDataProvider::new(&config.api.gamma_url);
     let detector = ArbitrageDetector::new(
@@ -97,9 +162,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.timing.adverse_selection_std,
     );
     let execution_engine = ExecutionEngine::new(fee_model.clone(), latency_model);
-    
-    println!("{} Daily Allowance: ${:.2} USDC (Enforced by ERC-7715)", "💸 [Init]".bold().yellow(), wallet.daily_limit);
-    println!("{} Trade Size: ${:.2} per leg", "📊 [Init]".bold().yellow(), config.trading.trade_size);
+
+    println!(
+        "{} Daily Allowance: ${:.2} USDC (Enforced by ERC-7715)",
+        "💸 [Init]".bold().yellow(),
+        wallet.daily_limit
+    );
+    println!(
+        "{} Trade Size: ${:.2} per leg",
+        "📊 [Init]".bold().yellow(),
+        config.trading.trade_size
+    );
     println!();
     println!("⏳ Waiting for MetaMask permission via Dashboard...");
 
@@ -119,7 +192,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
         };
-        println!("   Found {} active markets (Limit {})", markets.len(), config.api.market_limit);
+        println!(
+            "   Found {} active markets (Limit {})",
+            markets.len(),
+            config.api.market_limit
+        );
 
         // Hydrate prices
         market_provider.hydrate_market_prices(&mut markets).await;
@@ -136,19 +213,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        
-        // Lock position manager for updates
-        let mut exits = Vec::new(); // Placeholder to avoid holding lock too long if logic was complex
-        {
+
+        // Check and handle position exits
+        let exits = {
             let mut pm = position_manager.write().await;
-            exits = pm.check_exits(&markets, current_time, fee_model.taker_rate());
-        }
+            pm.check_exits(&markets, current_time, fee_model.taker_rate())
+        };
 
         if !exits.is_empty() {
             println!("📤 Closed {} positions:", exits.len());
             for exit in &exits {
-                println!("   {} | {:?} | PnL: ${:.4}", 
-                    exit.position.token_id, exit.reason, exit.pnl);
+                println!(
+                    "   {} | {:?} | PnL: ${:.4}",
+                    exit.position.token_id, exit.reason, exit.pnl
+                );
             }
         }
 
@@ -156,24 +234,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let signals = detector.scan(&markets);
         if signals.is_empty() {
             println!("   No arbitrage signals found.");
-            
+
             // ======== DEMO MODE: Always simulate trades for hackathon demo ========
             // This shows the system working even when no real arbitrage exists.
             if !markets.is_empty() {
                 let demo_market = &markets[0];
                 let simulated_pnl = (rand::random::<f64>() - 0.3) * 0.50; // Slight positive bias
                 let trade_cost = 2.0 + rand::random::<f64>() * 3.0;
-                
+
                 // Record simulated spend
                 let remaining = metamask.get_remaining_allowance().await;
                 if remaining >= trade_cost {
                     let _ = metamask.record_spend(trade_cost).await;
-                    
+
                     // Add to position manager as a "closed" trade for stats
                     let mut pm = position_manager.write().await;
                     pm.record_simulated_trade(simulated_pnl);
-                    
-                    println!("   🎭 [DEMO] Simulated trade on '{}' | Cost: ${:.2} | PnL: ${:.4}",
+
+                    println!(
+                        "   🎭 [DEMO] Simulated trade on '{}' | Cost: ${:.2} | PnL: ${:.4}",
                         demo_market.question.chars().take(40).collect::<String>(),
                         trade_cost,
                         simulated_pnl
@@ -183,40 +262,78 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // ======== END DEMO MODE ========
         } else {
             println!("⚡ Detected {} arbitrage signals!", signals.len());
-            
+
+            // Get current allowance for strategy mode calculation
+            let remaining_allowance = metamask.get_remaining_allowance().await;
+            let daily_limit = match metamask.get_permission().await {
+                Some(p) => p.daily_limit,
+                None => config.permission.daily_limit_usdc,
+            };
+
+            // Calculate minimum edge based on strategy mode
+            let min_edge =
+                get_min_edge_for_allowance(remaining_allowance, daily_limit, &config.strategy);
+            let strategy_mode =
+                get_strategy_mode_name(remaining_allowance, daily_limit, &config.strategy);
+            println!(
+                "   📈 Strategy Mode: {} (min edge: {:.1}%)",
+                strategy_mode.cyan(),
+                min_edge * 100.0
+            );
+
             for signal in signals {
-                println!("   Signal on Market {}: Spread {:.2}%, Edge ${:.2}", 
-                    signal.market_id, signal.spread * 100.0, signal.edge);
+                println!(
+                    "   Signal on Market {}: Spread {:.2}%, Edge ${:.2}",
+                    signal.market_id,
+                    signal.spread * 100.0,
+                    signal.edge
+                );
+
+                // Filter signals based on strategy mode minimum edge
+                if signal.spread < min_edge {
+                    println!(
+                        "   ⏭️ Skipping: spread {:.2}% below min edge {:.2}% for {} mode",
+                        signal.spread * 100.0,
+                        min_edge * 100.0,
+                        strategy_mode
+                    );
+                    continue;
+                }
 
                 if let Some(market) = markets.iter().find(|m| m.id == signal.market_id) {
                     if signal.recommended_side == Side::Buy {
                         let size_per_leg = config.trading.trade_size;
-                        
+
                         // Check MetaMask permission before trading
                         let remaining = metamask.get_remaining_allowance().await;
                         let required = size_per_leg * 2.0;
-                        
+
                         if remaining < required {
-                            println!("   ⚠️ Insufficient permission allowance (${:.2} < ${:.2})", 
-                                remaining, required);
+                            println!(
+                                "   ⚠️ Insufficient permission allowance (${:.2} < ${:.2})",
+                                remaining, required
+                            );
                             continue;
                         }
 
                         println!("   Attempting to execute arb strategy...");
 
-                        for (idx, token_id) in market.clob_token_ids.iter().enumerate() {
+                        for (_idx, token_id) in market.clob_token_ids.iter().enumerate() {
                             if let Ok(book) = market_provider.fetch_order_book(token_id).await {
                                 if let Some(result) = execution_engine.execute(
-                                    &book, size_per_leg, Side::Buy, &mut wallet
+                                    &book,
+                                    size_per_leg,
+                                    Side::Buy,
+                                    &mut wallet,
                                 ) {
                                     let _ = metamask.record_spend(result.total_cost).await;
-                                    
+
                                     let mut pm = position_manager.write().await;
                                     pm.open_position(Position {
                                         market_id: market.id.clone(),
                                         token_id: token_id.clone(),
                                         side: Side::Buy,
-                                        size: result.filed_size,
+                                        size: result.filled_size,
                                         entry_price: result.execution_price,
                                         entry_time: current_time,
                                         entry_spread: signal.spread,
@@ -232,7 +349,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Show stats
         {
             let pm = position_manager.read().await;
-            println!("\n📊 Stats: {} trades | Win rate: {:.0}% | PnL: ${:.2} | Open: {}", 
+            println!(
+                "\n📊 Stats: {} trades | Win rate: {:.0}% | PnL: ${:.2} | Open: {}",
                 pm.trade_count(),
                 pm.win_rate() * 100.0,
                 pm.total_pnl(),

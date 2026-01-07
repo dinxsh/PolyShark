@@ -2,12 +2,12 @@
 //!
 //! Orchestrates the main trading loop with safety controls and failure handling.
 
+use crate::arb::ArbitrageDetector;
+use crate::config::SafetyConfig;
+use crate::execution::ExecutionEngine;
+use crate::market::MarketDataProvider;
 use crate::types::Side;
 use crate::wallet::Wallet;
-use crate::market::MarketDataProvider;
-use crate::arb::ArbitrageDetector;
-use crate::execution::ExecutionEngine;
-use crate::config::SafetyConfig;
 use std::time::{Duration, Instant};
 
 /// Agent operational status for monitoring
@@ -70,7 +70,7 @@ impl TradingEngine {
     }
 
     /// Check if engine should enter safe mode
-    /// 
+    ///
     /// SAFETY: This is called before each tick to ensure we don't trade
     /// under dangerous conditions.
     fn check_safety_conditions(&mut self) -> bool {
@@ -91,8 +91,10 @@ impl TradingEngine {
         if let Some(last_fetch) = self.last_data_fetch {
             let delay = last_fetch.elapsed().as_millis() as u64;
             if delay > self.safety_config.max_data_delay_ms {
-                println!("⚠️ [Engine] Data delay {}ms exceeds threshold {}ms - suspending",
-                    delay, self.safety_config.max_data_delay_ms);
+                println!(
+                    "⚠️ [Engine] Data delay {}ms exceeds threshold {}ms - suspending",
+                    delay, self.safety_config.max_data_delay_ms
+                );
                 self.status = EngineStatus::DataDelaySuspended { delay_ms: delay };
                 return false;
             }
@@ -103,8 +105,11 @@ impl TradingEngine {
         // with a cooldown period to prevent hammering failing APIs.
         if self.consecutive_failures >= self.safety_config.max_consecutive_failures {
             let cooldown = Duration::from_secs(self.safety_config.safe_mode_cooldown_secs);
-            println!("🛑 [Engine] {} consecutive failures - entering safe mode for {}s",
-                self.consecutive_failures, cooldown.as_secs());
+            println!(
+                "🛑 [Engine] {} consecutive failures - entering safe mode for {}s",
+                self.consecutive_failures,
+                cooldown.as_secs()
+            );
             self.status = EngineStatus::SafeMode {
                 reason: format!("{} consecutive API failures", self.consecutive_failures),
                 until: Instant::now() + cooldown,
@@ -116,11 +121,14 @@ impl TradingEngine {
     }
 
     /// Handle API failure with proper tracking
-    /// 
+    ///
     /// FAILURE HANDLING: Tracks consecutive failures and logs appropriately.
     fn handle_failure(&mut self, error: &dyn std::error::Error) {
         self.consecutive_failures += 1;
-        println!("❌ [Engine] API failure #{}: {}", self.consecutive_failures, error);
+        println!(
+            "❌ [Engine] API failure #{}: {}",
+            self.consecutive_failures, error
+        );
     }
 
     /// Handle successful operation
@@ -130,7 +138,7 @@ impl TradingEngine {
     }
 
     /// Run a single tick of the trading loop
-    /// 
+    ///
     /// SAFETY GUARANTEES:
     /// 1. Checks safety conditions before any trading
     /// 2. Tracks API failures and enters safe mode after threshold
@@ -156,19 +164,24 @@ impl TradingEngine {
 
         // Scan for signals
         let signals = self.detector.scan(&markets);
-        
+
         for signal in signals {
             // Simplified execution logic from main.rs
             if signal.recommended_side == Side::Buy {
-               // Find market
-               if let Some(market) = markets.iter().find(|m| m.id == signal.market_id) {
+                // Find market
+                if let Some(market) = markets.iter().find(|m| m.id == signal.market_id) {
                     let size_per_leg = 5.0; // Fixed for now
 
                     // Execute on all outcomes (Buy Bundle behavior)
                     for token_id in &market.clob_token_ids {
                         match self.market_provider.fetch_order_book(token_id).await {
                             Ok(book) => {
-                                self.execution_engine.execute(&book, size_per_leg, Side::Buy, &mut self.wallet);
+                                self.execution_engine.execute(
+                                    &book,
+                                    size_per_leg,
+                                    Side::Buy,
+                                    &mut self.wallet,
+                                );
                             }
                             Err(e) => {
                                 // Log but don't fail entire tick for single order book fetch
@@ -176,7 +189,7 @@ impl TradingEngine {
                             }
                         }
                     }
-               }
+                }
             }
         }
         Ok(())
@@ -190,7 +203,7 @@ impl TradingEngine {
             }
             // In simulation we might not want to sleep strictly, or sleep 0 for speed
             // simulating "ticks"
-            tokio::time::sleep(Duration::from_millis(100)).await; 
+            tokio::time::sleep(Duration::from_millis(100)).await;
         }
     }
 }
