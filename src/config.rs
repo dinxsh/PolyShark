@@ -1,5 +1,5 @@
 //! Configuration module for PolyShark
-//! 
+//!
 //! Loads settings from config.toml instead of hardcoded values.
 
 use serde::Deserialize;
@@ -117,9 +117,8 @@ impl Config {
     pub fn load_from(path: &str) -> Result<Self, ConfigError> {
         let contents = fs::read_to_string(path)
             .map_err(|e| ConfigError::FileNotFound(path.to_string(), e.to_string()))?;
-        
-        toml::from_str(&contents)
-            .map_err(|e| ConfigError::ParseError(e.to_string()))
+
+        toml::from_str(&contents).map_err(|e| ConfigError::ParseError(e.to_string()))
     }
 
     /// Create default configuration

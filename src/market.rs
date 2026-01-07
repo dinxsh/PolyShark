@@ -1,6 +1,6 @@
 use crate::types::{Market, OrderBook, PriceLevel};
-use std::error::Error;
 use serde_json::Value;
+use std::error::Error;
 
 #[allow(dead_code)]
 pub struct MarketDataProvider {
@@ -13,7 +13,8 @@ impl MarketDataProvider {
     pub fn new(_envio_url: &str) -> Self {
         Self {
             client: reqwest::Client::new(),
-            gamma_url: "https://gamma-api.polymarket.com/events?limit=20&active=true&closed=false".to_string(),
+            gamma_url: "https://gamma-api.polymarket.com/events?limit=20&active=true&closed=false"
+                .to_string(),
             clob_url: "https://clob.polymarket.com/book".to_string(),
         }
     }
@@ -21,7 +22,13 @@ impl MarketDataProvider {
     /// Fetch all active markets from Gamma API
     pub async fn fetch_markets(&self) -> Result<Vec<Market>, Box<dyn Error>> {
         println!("🌐 Fetching LIVE market data from Gamma API...");
-        let resp = self.client.get(&self.gamma_url).send().await?.text().await?;
+        let resp = self
+            .client
+            .get(&self.gamma_url)
+            .send()
+            .await?
+            .text()
+            .await?;
         let json: Value = serde_json::from_str(&resp)?;
 
         let mut markets = Vec::new();
@@ -34,30 +41,41 @@ impl MarketDataProvider {
                         let id = m["id"].as_str().unwrap_or("").to_string();
                         let question = m["question"].as_str().unwrap_or("").to_string();
                         let slug = event["slug"].as_str().unwrap_or("").to_string();
-                        
+
                         // Extract outcomes
-                        let outcomes: Vec<String> = m["outcomes"].as_array()
-                            .map(|arr| arr.iter().map(|v| v.as_str().unwrap_or("").to_string()).collect())
+                        let outcomes: Vec<String> = m["outcomes"]
+                            .as_array()
+                            .map(|arr| {
+                                arr.iter()
+                                    .map(|v| v.as_str().unwrap_or("").to_string())
+                                    .collect()
+                            })
                             .unwrap_or_default();
 
                         // Extract CLOB Token IDs (Critical)
                         // Note: Gamma API returns this as a STRINGIFIED JSON array, e.g. "[\"123\", \"456\"]"
-                        let clob_token_ids: Vec<String> = if let Some(s) = m["clobTokenIds"].as_str() {
-                             serde_json::from_str(s).unwrap_or_default()
-                        } else {
-                            // Fallback if it somehow is an actual array (future proofing)
-                            m["clobTokenIds"].as_array()
-                                .map(|arr| arr.iter().map(|v| v.as_str().unwrap_or("").to_string()).collect())
-                                .unwrap_or_default()
-                        };
+                        let clob_token_ids: Vec<String> =
+                            if let Some(s) = m["clobTokenIds"].as_str() {
+                                serde_json::from_str(s).unwrap_or_default()
+                            } else {
+                                // Fallback if it somehow is an actual array (future proofing)
+                                m["clobTokenIds"]
+                                    .as_array()
+                                    .map(|arr| {
+                                        arr.iter()
+                                            .map(|v| v.as_str().unwrap_or("").to_string())
+                                            .collect()
+                                    })
+                                    .unwrap_or_default()
+                            };
 
                         // Debug: Print what we found
                         // println!("DEBUG: Found market '{}' with {} tokens", slug, clob_token_ids.len());
 
                         // Skip if incomplete execution data
-                        if clob_token_ids.len() < 2 { 
+                        if clob_token_ids.len() < 2 {
                             // println!("DEBUG: Skipping {} (Not enough tokens)", slug);
-                            continue; 
+                            continue;
                         }
 
                         markets.push(Market {
@@ -80,7 +98,7 @@ impl MarketDataProvider {
                 }
             }
         }
-        
+
         Ok(markets)
     }
 
@@ -100,13 +118,15 @@ impl MarketDataProvider {
         }
 
         // 2. Create stream
-        let fetches = stream::iter(tasks).map(|(m_idx, t_idx, token_id)| {
-            let client = &self; // Ref to self
-            async move {
-                let res = client.fetch_order_book(&token_id).await;
-                (m_idx, t_idx, res)
-            }
-        }).buffer_unordered(50); // Concurrent limit
+        let fetches = stream::iter(tasks)
+            .map(|(m_idx, t_idx, token_id)| {
+                let client = &self; // Ref to self
+                async move {
+                    let res = client.fetch_order_book(&token_id).await;
+                    (m_idx, t_idx, res)
+                }
+            })
+            .buffer_unordered(50); // Concurrent limit
 
         // 3. Collect results
         let results: Vec<_> = fetches.collect().await;
@@ -127,7 +147,11 @@ impl MarketDataProvider {
             }
         }
 
-        println!("   ✅ Updated {} prices in {:.2?}", update_count, start.elapsed());
+        println!(
+            "   ✅ Updated {} prices in {:.2?}",
+            update_count,
+            start.elapsed()
+        );
     }
 
     /// Fetch order book for a market from CLOB API
@@ -143,11 +167,13 @@ impl MarketDataProvider {
             Some(PriceLevel { price: p, size: s })
         };
 
-        let bids: Vec<PriceLevel> = json["bids"].as_array()
+        let bids: Vec<PriceLevel> = json["bids"]
+            .as_array()
             .map(|arr| arr.iter().filter_map(parse_level).collect())
             .unwrap_or_default();
-            
-        let asks: Vec<PriceLevel> = json["asks"].as_array()
+
+        let asks: Vec<PriceLevel> = json["asks"]
+            .as_array()
             .map(|arr| arr.iter().filter_map(parse_level).collect())
             .unwrap_or_default();
 

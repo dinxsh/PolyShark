@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::types::Side;
+use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone)]
@@ -71,14 +71,24 @@ impl Wallet {
     }
 
     /// Open a new position (tracking only)
-    pub fn open_position(&mut self, token_id: String, side: Side, size: f64, price: f64, timestamp: u64) {
-        self.positions.insert(token_id.clone(), Position {
-            token_id,
-            side,
-            size,
-            entry_price: price,
-            entry_time: timestamp,
-        });
+    pub fn open_position(
+        &mut self,
+        token_id: String,
+        side: Side,
+        size: f64,
+        price: f64,
+        timestamp: u64,
+    ) {
+        self.positions.insert(
+            token_id.clone(),
+            Position {
+                token_id,
+                side,
+                size,
+                entry_price: price,
+                entry_time: timestamp,
+            },
+        );
     }
 
     /// Close a position (tracking only)
@@ -86,7 +96,7 @@ impl Wallet {
     pub fn close_position(&mut self, token_id: &str, _exit_price: f64) {
         self.positions.remove(token_id);
     }
-    
+
     pub fn record_trade(&mut self, is_winner: bool) {
         self.total_trades += 1;
         if is_winner {
@@ -102,7 +112,7 @@ mod tests {
     #[test]
     fn test_daily_limits() {
         let mut wallet = Wallet::new(100.0);
-        
+
         // Spend 50
         assert!(wallet.record_spend(50.0));
         assert_eq!(wallet.spent_today, 50.0);

@@ -1,5 +1,5 @@
 //! Position management module
-//! 
+//!
 //! Handles position tracking, mean reversion exits, and PnL calculation.
 
 use crate::types::{Market, Side};
@@ -14,19 +14,19 @@ pub struct Position {
     pub size: f64,
     pub entry_price: f64,
     pub entry_time: u64,
-    pub entry_spread: f64,  // Spread at entry for mean reversion tracking
+    pub entry_spread: f64, // Spread at entry for mean reversion tracking
 }
 
 /// Position exit reason
 #[derive(Debug, Clone)]
 pub enum ExitReason {
-    MeanReversion,      // Spread normalized
+    MeanReversion, // Spread normalized
     #[allow(dead_code)]
-    ProfitTarget,       // Hit profit target
-    StopLoss,           // Hit stop loss
-    Timeout,            // Position held too long
+    ProfitTarget, // Hit profit target
+    StopLoss,      // Hit stop loss
+    Timeout,       // Position held too long
     #[allow(dead_code)]
-    Manual,             // Manual close
+    Manual, // Manual close
 }
 
 /// Position exit result
@@ -69,8 +69,12 @@ impl PositionManager {
 
     /// Add a new position
     pub fn open_position(&mut self, position: Position) {
-        println!("📈 [Position] Opened: {} @ ${:.4} (spread: {:.2}%)", 
-            position.token_id, position.entry_price, position.entry_spread * 100.0);
+        println!(
+            "📈 [Position] Opened: {} @ ${:.4} (spread: {:.2}%)",
+            position.token_id,
+            position.entry_price,
+            position.entry_spread * 100.0
+        );
         self.positions.insert(position.token_id.clone(), position);
     }
 
@@ -86,7 +90,12 @@ impl PositionManager {
     }
 
     /// Check positions for exit conditions
-    pub fn check_exits(&mut self, markets: &[Market], current_time: u64, fee_rate: f64) -> Vec<ExitResult> {
+    pub fn check_exits(
+        &mut self,
+        markets: &[Market],
+        current_time: u64,
+        fee_rate: f64,
+    ) -> Vec<ExitResult> {
         let mut exits = Vec::new();
         let mut to_remove = Vec::new();
 
@@ -134,8 +143,10 @@ impl PositionManager {
                         fees,
                     };
 
-                    println!("📉 [Position] Closed: {} | Reason: {:?} | PnL: ${:.4}", 
-                        token_id, reason, net_pnl);
+                    println!(
+                        "📉 [Position] Closed: {} | Reason: {:?} | PnL: ${:.4}",
+                        token_id, reason, net_pnl
+                    );
 
                     exits.push(exit_result);
                     to_remove.push(token_id.clone());
@@ -159,7 +170,12 @@ impl PositionManager {
 
     /// Force close a position
     #[allow(dead_code)]
-    pub fn close_position(&mut self, token_id: &str, exit_price: f64, fee_rate: f64) -> Option<ExitResult> {
+    pub fn close_position(
+        &mut self,
+        token_id: &str,
+        exit_price: f64,
+        fee_rate: f64,
+    ) -> Option<ExitResult> {
         if let Some(position) = self.positions.remove(token_id) {
             let current_time = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -206,7 +222,7 @@ impl PositionManager {
     pub fn trade_count(&self) -> usize {
         self.history.len()
     }
-    
+
     /// Record a simulated trade (for demo mode only)
     pub fn record_simulated_trade(&mut self, pnl: f64) {
         // Create a dummy exit result for stats tracking
@@ -240,7 +256,7 @@ mod tests {
     #[test]
     fn test_position_manager() {
         let mut pm = PositionManager::new(0.01, 0.05, 3600);
-        
+
         let pos = Position {
             market_id: "m1".to_string(),
             token_id: "t1".to_string(),
@@ -250,7 +266,7 @@ mod tests {
             entry_time: 1000,
             entry_spread: 0.03,
         };
-        
+
         pm.open_position(pos);
         assert_eq!(pm.get_positions().len(), 1);
     }

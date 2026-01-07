@@ -3,8 +3,8 @@ use crate::types::Market;
 /// Fee model based on Polymarket fee structure
 #[derive(Debug, Clone)]
 pub struct FeeModel {
-    pub maker_fee_bps: u32,   // Basis points (usually 0)
-    pub taker_fee_bps: u32,   // Basis points (usually ~200)
+    pub maker_fee_bps: u32, // Basis points (usually 0)
+    pub taker_fee_bps: u32, // Basis points (usually ~200)
 }
 
 impl FeeModel {
@@ -19,7 +19,11 @@ impl FeeModel {
 
     /// Calculate fee for a trade
     pub fn calculate(&self, notional: f64, is_maker: bool) -> f64 {
-        let bps = if is_maker { self.maker_fee_bps } else { self.taker_fee_bps };
+        let bps = if is_maker {
+            self.maker_fee_bps
+        } else {
+            self.taker_fee_bps
+        };
         notional * (bps as f64 / 10000.0)
     }
 

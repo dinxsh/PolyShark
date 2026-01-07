@@ -14,7 +14,10 @@ pub struct ExecutionEngine {
 
 impl ExecutionEngine {
     pub fn new(fee_model: FeeModel, latency_model: LatencyModel) -> Self {
-        Self { fee_model, latency_model }
+        Self {
+            fee_model,
+            latency_model,
+        }
     }
 
     /// Simulate order execution
@@ -33,7 +36,7 @@ impl ExecutionEngine {
 
         // Simulate the delay
         if !delay.is_zero() {
-             thread::sleep(delay);
+            thread::sleep(delay);
         }
 
         // 3. Check fill ratio
@@ -62,24 +65,29 @@ impl ExecutionEngine {
         // 7. Execute via Smart Account
         if wallet.record_spend(total_cost) {
             let remaining = wallet.daily_limit - wallet.spent_today;
-            println!("✅ [Smart Account] Batch Executed: Swap {:.2} USDC -> Tokens", total_cost);
-            println!("   ↳ Cost: ${:.2} | Latency: {:?} | Remaining Allowance: ${:.2}", 
-                total_cost, delay, remaining);
-            
+            println!(
+                "✅ [Smart Account] Batch Executed: Swap {:.2} USDC -> Tokens",
+                total_cost
+            );
+            println!(
+                "   ↳ Cost: ${:.2} | Latency: {:?} | Remaining Allowance: ${:.2}",
+                total_cost, delay, remaining
+            );
+
             // Track position
-            let token_id = &book.token_id; 
-             wallet.open_position(
+            let token_id = &book.token_id;
+            wallet.open_position(
                 token_id.clone(),
                 side,
                 filled_size,
                 exec_price,
                 crate::wallet::Wallet::current_timestamp(),
             );
-            
-            wallet.record_trade(true); 
+
+            wallet.record_trade(true);
 
             Some(ExecutionResult {
-                filed_size: filled_size,
+                filled_size: filled_size,
                 execution_price: exec_price,
                 fee_paid: fee,
                 slippage,
@@ -87,7 +95,7 @@ impl ExecutionEngine {
                 success: true,
             })
         } else {
-             None
+            None
         }
     }
 }
@@ -96,19 +104,25 @@ impl ExecutionEngine {
 mod tests {
     use super::*;
     use crate::latency::LatencyModel;
-    use crate::types::{PriceLevel, OrderBook};
+    use crate::types::{OrderBook, PriceLevel};
 
     #[test]
     fn test_execution_permission_logic() {
-        let fee_model = FeeModel { maker_fee_bps: 0, taker_fee_bps: 0 };
+        let fee_model = FeeModel {
+            maker_fee_bps: 0,
+            taker_fee_bps: 0,
+        };
         let latency_model = LatencyModel::new(0, 0.0);
         let engine = ExecutionEngine::new(fee_model, latency_model);
-        
+
         let mut wallet = Wallet::new(10.0);
         let book = OrderBook {
             token_id: "t1".to_string(),
             bids: vec![],
-            asks: vec![PriceLevel { price: 0.5, size: 100.0 }],
+            asks: vec![PriceLevel {
+                price: 0.5,
+                size: 100.0,
+            }],
             timestamp: 0,
         };
 
