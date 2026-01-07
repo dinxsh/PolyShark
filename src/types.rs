@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Market {
     pub id: String,                  // unique market ID
-    pub question: String,            // Human redabale question
+    pub question: String,            // Human readable question
     pub slug: String,                // url friendly name
     pub outcomes: Vec<String>,       // ["yes" , "no"]
     pub outcome_prices: Vec<f64>,    // [0.5 , 0.5]
